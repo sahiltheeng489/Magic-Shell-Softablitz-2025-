@@ -1,0 +1,6 @@
+// settings.json
+{
+  "timeout": 5,
+  "nl_mode": true,
+  "shell": "bash"
+}
