@@ -1,5 +1,5 @@
 import tkinter as tk
-from core.runner import CommandRunner
+from ..core.runner import CommandRunner
 
 # Create an instance of CommandRunner
 runner = CommandRunner()
