@@ -1,3 +1,4 @@
+from core.runner import CommandRunner
 import tkinter as tk
 
 def run_command():
