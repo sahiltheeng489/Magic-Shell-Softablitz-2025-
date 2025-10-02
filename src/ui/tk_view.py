@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import tkinter as tk
 import tkinter.font as tkFont
 from core.controller import Controller
@@ -14,7 +18,7 @@ def insert_output(text):
     output_area.config(state='normal')
     output_area.insert(tk.END, text)
     output_area.config(state='disabled')
-    output_area.see(tk.END)  # scroll to end
+    output_area.see(tk.END)
 
 window = tk.Tk()
 window.title("Magic Shell UI")
