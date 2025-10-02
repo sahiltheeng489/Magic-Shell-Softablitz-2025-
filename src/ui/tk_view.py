@@ -1,11 +1,17 @@
-from core.runner import CommandRunner
 import tkinter as tk
+from core.runner import CommandRunner
+
+# Create an instance of CommandRunner
+runner = CommandRunner()
 
 def run_command():
     # Get text from the input box
     user_input = entry.get()
-    # Print it to the output area
-    output_area.insert(tk.END, user_input + '\n')
+    # Run the command using CommandRunner
+    output = runner.run(user_input)
+    # Display the output in the text area
+    output_area.insert(tk.END, f"> {user_input}\n{output}\n")
+    # Clear input box
     entry.delete(0, tk.END)
 
 # Create the main window
@@ -21,7 +27,7 @@ run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
 
 # Output text area
-output_area = tk.Text(window, height=10, width=50)
+output_area = tk.Text(window, height=15, width=60)
 output_area.pack(pady=5)
 
 # Start the app
