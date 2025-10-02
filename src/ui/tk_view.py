@@ -1,50 +1,41 @@
-# Handles the user interface using Tkinter.
-# Responsible for displaying input/output and interacting with the controller.
-
 import tkinter as tk
-from tkinter import scrolledtext
+import tkinter.font as tkFont
+from ..core.runner import CommandRunner
 
-class TkView:
-    def __init__(self, controller):
-        """
-        Initialize the Tkinter window and UI components.
-        """
-        self.controller = controller
-        self.root = tk.Tk()
-        self.root.title("Python Magic Shell")
+runner = CommandRunner()
 
-        # Input text field where user types commands or phrases
-        self.entry = tk.Entry(self.root, width=50)
-        self.entry.pack(pady=10)
+def run_command():
+    user_command = entry.get()
+    output = runner.run(user_command)
+    insert_output(f"> {user_command}\n{output}\n")
+    entry.delete(0, tk.END)
 
-        # Button that triggers command execution
-        self.run_button = tk.Button(self.root, text="Run", command=self.on_run)
-        self.run_button.pack(pady=5)
+def insert_output(text):
+    output_area.config(state='normal')
+    output_area.insert(tk.END, text)
+    output_area.config(state='disabled')
+    output_area.see(tk.END)  # scroll to end
 
-        # Scrollable text area to display output from executed commands
-        self.output = scrolledtext.ScrolledText(self.root, width=60, height=15)
-        self.output.pack(pady=10)
+window = tk.Tk()
+window.title("Magic Shell UI")
 
-    def on_run(self):
-        """
-        Event handler for the "Run" button.
-        - Reads user input.
-        - Sends it to the controller.
-        - Displays the response in the output box.
-        """
-        user_input = self.entry.get()
-        response = self.controller.handle_input(user_input)
-        self.show_output(response)
+terminal_font = tkFont.Font(family="Consolas", size=10)
 
-    def show_output(self, text):
-        """
-        Append new text to the output area and auto-scroll.
-        """
-        self.output.insert(tk.END, text + "\n")
-        self.output.see(tk.END)
+entry = tk.Entry(window, width=80, font=terminal_font)
+entry.pack(pady=5)
 
-    def run(self):
-        """
-        Start the Tkinter main loop (keeps the window running).
-        """
-        self.root.mainloop()
+run_button = tk.Button(window, text="Run", command=run_command)
+run_button.pack(pady=5)
+
+output_area = tk.Text(window, height=20, width=80,
+                      bg="black", fg="lime",
+                      insertbackground="white",
+                      font=terminal_font,
+                      state='disabled')
+output_area.pack(pady=5)
+
+scrollbar = tk.Scrollbar(window, command=output_area.yview)
+output_area.config(yscrollcommand=scrollbar.set)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+window.mainloop()
