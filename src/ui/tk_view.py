@@ -1,34 +1,41 @@
 import tkinter as tk
+import tkinter.font as tkFont
 from ..core.runner import CommandRunner
 
-# Create an instance of CommandRunner
 runner = CommandRunner()
 
 def run_command():
-    # Get text from the input box
-    user_input = entry.get()
-    # Run the command using CommandRunner
-    output = runner.run(user_input)
-    # Display the output in the text area
-    output_area.insert(tk.END, f"> {user_input}\n{output}\n")
-    # Clear input box
+    user_command = entry.get()
+    output = runner.run(user_command)
+    insert_output(f"> {user_command}\n{output}\n")
     entry.delete(0, tk.END)
 
-# Create the main window
+def insert_output(text):
+    output_area.config(state='normal')
+    output_area.insert(tk.END, text)
+    output_area.config(state='disabled')
+    output_area.see(tk.END)  # scroll to end
+
 window = tk.Tk()
 window.title("Magic Shell UI")
 
-# Input box
-entry = tk.Entry(window, width=40)
+terminal_font = tkFont.Font(family="Consolas", size=10)
+
+entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
 
-# Run button
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
 
-# Output text area
-output_area = tk.Text(window, height=15, width=60)
+output_area = tk.Text(window, height=20, width=80,
+                      bg="black", fg="lime",
+                      insertbackground="white",
+                      font=terminal_font,
+                      state='disabled')
 output_area.pack(pady=5)
 
-# Start the app
+scrollbar = tk.Scrollbar(window, command=output_area.yview)
+output_area.config(yscrollcommand=scrollbar.set)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 window.mainloop()
