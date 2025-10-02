@@ -27,7 +27,7 @@ entry.pack(pady=5)
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
 
-output_area = tk.Text(window, height=20, width=80,
+output_area = tk.Text(window, height=20, width=150,
                       bg="black", fg="lime",
                       insertbackground="white",
                       font=terminal_font,
