@@ -2,23 +2,21 @@ import subprocess
 import platform
 import os
 from pathlib import Path
+import signal
 
 class CommandRunner:
     def __init__(self):
         self.is_windows = platform.system().lower() == 'windows'
         self.cwd = os.getcwd()
+        self.process = None  # Store Popen process
 
     def _translate(self, command: str) -> str:
         c = command.strip()
         if self.is_windows:
-            # Translate some Unix commands to Windows equivalents
             if c == 'ls':
                 return 'dir'
             if c == 'pwd':
                 return 'cd'
-        else:
-            # Unix system can accept these as-is
-            pass
         return c
 
     def _handle_cd(self, command: str) -> str | None:
@@ -27,13 +25,10 @@ class CommandRunner:
             return None
         if parts[0].lower() != 'cd':
             return None
-        # Change directory logic
         if len(parts) == 1:
-            # Just 'cd' prints current dir
             return self.cwd + '\n'
         target = parts[1].strip().strip('"').strip("'")
         if target == '-':
-            # Optional: add previous directory tracking
             return self.cwd + '\n'
         new_path = Path(target)
         if not new_path.is_absolute():
@@ -54,14 +49,24 @@ class CommandRunner:
         if cd_result is not None:
             return cd_result
         try:
-            completed_process = subprocess.run(
-                command, shell=True, capture_output=True, text=True, check=False, cwd=self.cwd
+            self.process = subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, text=True, cwd=self.cwd
             )
-            out = completed_process.stdout
-            err = completed_process.stderr
+            out, err = self.process.communicate()
+            self.process = None
             return out if out else err
         except Exception as e:
+            self.process = None
             return f"Error: {e}\n"
+
+    def cancel(self):
+        if self.process:
+            if self.is_windows:
+                self.process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                self.process.terminate()
+            self.process = None
 
     def get_cwd(self) -> str:
         return self.cwd
