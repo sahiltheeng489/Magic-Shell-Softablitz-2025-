@@ -8,7 +8,7 @@ class CommandRunner:
     def __init__(self):
         self.is_windows = platform.system().lower() == 'windows'
         self.cwd = os.getcwd()
-        self.process = None  # Store Popen process
+        self.process = None  # Store current running process
 
     def _translate(self, command: str) -> str:
         c = command.strip()
@@ -63,6 +63,7 @@ class CommandRunner:
     def cancel(self):
         if self.process:
             if self.is_windows:
+                # Send CTRL_BREAK_EVENT to subprocess group
                 self.process.send_signal(signal.CTRL_BREAK_EVENT)
             else:
                 self.process.terminate()
