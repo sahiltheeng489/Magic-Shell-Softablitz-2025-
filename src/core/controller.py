@@ -50,6 +50,9 @@ class Controller:
                 self.on_output(user_text, result)
         t = threading.Thread(target=task, daemon=True)
         t.start()
+        
+    def cancel(self):
+        self.runner.cancel()
 
     def get_cwd(self) -> str:
         return self.runner.get_cwd()
