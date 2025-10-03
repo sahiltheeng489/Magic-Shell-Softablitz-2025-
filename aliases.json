@@ -1,1 +1,8 @@
-{}
+{
+  "ll": "dir",
+  "list all": "dir",
+  "list files": "dir",
+  "current directory": "cd",
+  "home": "cd %HOMEPATH%",
+  "up": "cd .."
+}
