@@ -1,10 +1,11 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+print("sys.path:", sys.path)
 
 import tkinter as tk
 import tkinter.font as tkFont
-from core.controller import Controller
+from src.core.controller import Controller
 
 def on_controller_output(user_cmd, output):
     insert_output(f"> {user_cmd}\n{output}\n")

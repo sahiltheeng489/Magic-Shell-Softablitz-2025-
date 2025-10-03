@@ -1,9 +1,9 @@
 import threading
-from core.runner import CommandRunner
-from core.safety import Safety
-from nlp.mapper import PhraseMapper
-from store.alias import AliasStore
-from store.history import HistoryStore
+from src.core.runner import CommandRunner
+from src.core.safety import Safety
+from src.nlp.mapper import PhraseMapper
+from src.store.alias import AliasStore
+from src.store.history import HistoryStore
 
 class Controller:
     def __init__(self, on_output=None, on_cwd_changed=None):
