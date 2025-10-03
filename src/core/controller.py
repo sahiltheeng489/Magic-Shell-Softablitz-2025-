@@ -19,7 +19,6 @@ class Controller:
         text = self.aliases.resolve(user_text)
         cmd = self.mapper.map_phrase(text)
 
-        # Detect cd before safety to ensure path messages still pass through
         if cmd.strip().lower().startswith('cd'):
             result = self.runner.run(cmd)
             self.history.add(user_text, status="ok", output_len=len(result))
@@ -50,6 +49,9 @@ class Controller:
                 self.on_output(user_text, result)
         t = threading.Thread(target=task, daemon=True)
         t.start()
+
+    def cancel(self):
+        self.runner.cancel()
 
     def get_cwd(self) -> str:
         return self.runner.get_cwd()

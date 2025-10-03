@@ -2,11 +2,13 @@ import subprocess
 import platform
 import os
 from pathlib import Path
+import signal
 
 class CommandRunner:
     def __init__(self):
         self.is_windows = platform.system().lower() == 'windows'
         self.cwd = os.getcwd()
+        self.process = None  # Store current running process
 
     def _translate(self, command: str) -> str:
         c = command.strip()
@@ -18,59 +20,54 @@ class CommandRunner:
         return c
 
     def _handle_cd(self, command: str) -> str | None:
-        """
-        If command is a 'cd ...', perform it in-process and return a message.
-        Return None if it's not a cd command.
-        """
         parts = command.strip().split(maxsplit=1)
         if not parts:
             return None
         if parts[0].lower() != 'cd':
             return None
-
-        # cd with no args -> print cwd
         if len(parts) == 1:
-            return str(self.cwd) + "\n"
-
+            return self.cwd + '\n'
         target = parts[1].strip().strip('"').strip("'")
-        # Expand ~ and relative paths
         if target == '-':
-            # No previous dir tracking yet; optional enhancement
-            return str(self.cwd) + "\n"
-
+            return self.cwd + '\n'
         new_path = Path(target)
         if not new_path.is_absolute():
             new_path = Path(self.cwd) / new_path
-
         try:
             new_path = new_path.resolve(strict=True)
             if not new_path.is_dir():
-                return f"The system cannot find the path specified: {target}\n"
-            # Change process cwd for future commands
+                return f"Error: The directory does not exist: {target}\n"
             os.chdir(new_path)
             self.cwd = str(new_path)
             return ""
         except Exception as e:
-            return f"cd: {e}\n"
+            return f"Error changing directory: {e}\n"
 
     def run(self, command: str) -> str:
         command = self._translate(command)
-
-        # Intercept cd to change internal cwd
         cd_result = self._handle_cd(command)
         if cd_result is not None:
             return cd_result
-
         try:
-            completed_process = subprocess.run(
-                command, shell=True, capture_output=True, text=True, check=False, cwd=self.cwd
+            self.process = subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, text=True, cwd=self.cwd
             )
-            # Prefer stdout; if empty, show stderr
-            out = completed_process.stdout
-            err = completed_process.stderr
+            out, err = self.process.communicate()
+            self.process = None
             return out if out else err
         except Exception as e:
+            self.process = None
             return f"Error: {e}\n"
+
+    def cancel(self):
+        if self.process:
+            if self.is_windows:
+                # Send CTRL_BREAK_EVENT to subprocess group
+                self.process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                self.process.terminate()
+            self.process = None
 
     def get_cwd(self) -> str:
         return self.cwd

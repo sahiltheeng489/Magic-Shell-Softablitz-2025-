@@ -1,7 +1,6 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-print("sys.path:", sys.path)
 
 import tkinter as tk
 import tkinter.font as tkFont
@@ -15,7 +14,6 @@ def on_cwd_changed(new_cwd):
 
 controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
 
-# History navigation
 cmd_history = []
 history_index = -1
 
@@ -30,6 +28,11 @@ def run_command():
     run_button.config(state='disabled')
     controller.handle_input_async(user_command)
     window.after(200, lambda: run_button.config(state='normal'))
+
+def cancel_command():
+    controller.cancel()
+    insert_output("** Command cancelled by user **\n")
+    run_button.config(state='normal')
 
 def on_up(event):
     global history_index
@@ -66,6 +69,9 @@ entry.bind("<Down>", on_down)
 
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
+
+cancel_button = tk.Button(window, text="Cancel", command=cancel_command)
+cancel_button.pack(pady=5)
 
 output_area = tk.Text(window, height=30, width=100,
                       bg="black", fg="lime",
