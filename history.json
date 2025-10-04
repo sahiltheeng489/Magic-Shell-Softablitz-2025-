@@ -154,5 +154,23 @@
     "cmd": "ls",
     "status": "ok",
     "output_len": 771
+  },
+  {
+    "ts": "2025-10-05T01:51:52",
+    "cmd": "ls",
+    "status": "ok",
+    "output_len": 727
+  },
+  {
+    "ts": "2025-10-05T01:52:48",
+    "cmd": "cd -help",
+    "status": "ok",
+    "output_len": 171
+  },
+  {
+    "ts": "2025-10-05T01:52:57",
+    "cmd": "cd --help",
+    "status": "ok",
+    "output_len": 0
   }
 ]
