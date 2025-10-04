@@ -34,5 +34,53 @@
     "cmd": "mkdir",
     "status": "ok",
     "output_len": 40
+  },
+  {
+    "ts": "2025-10-04T09:36:54",
+    "cmd": "ls",
+    "status": "ok",
+    "output_len": 675
+  },
+  {
+    "ts": "2025-10-04T09:36:58",
+    "cmd": "pwd",
+    "status": "ok",
+    "output_len": 74
+  },
+  {
+    "ts": "2025-10-04T09:38:55",
+    "cmd": "mkdir testfolder",
+    "status": "ok",
+    "output_len": 0
+  },
+  {
+    "ts": "2025-10-04T09:39:05",
+    "cmd": "cd testfolder",
+    "status": "ok",
+    "output_len": 0
+  },
+  {
+    "ts": "2025-10-04T09:39:10",
+    "cmd": "pwd",
+    "status": "ok",
+    "output_len": 85
+  },
+  {
+    "ts": "2025-10-04T09:39:15",
+    "cmd": "cd ..",
+    "status": "ok",
+    "output_len": 0
+  },
+  {
+    "ts": "2025-10-04T09:39:19",
+    "cmd": "pwd",
+    "status": "ok",
+    "output_len": 74
+  },
+  {
+    "ts": "2025-10-04T09:39:55",
+    "cmd": "ping google.com",
+    "status": "ok",
+    "output_len": 82
   }
 ]

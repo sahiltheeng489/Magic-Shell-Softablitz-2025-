@@ -1,8 +1,14 @@
 {
   "ll": "dir",
   "list all": "dir",
+  "ls": "dir",
   "list files": "dir",
-  "current directory": "cd",
-  "home": "cd %HOMEPATH%",
-  "up": "cd .."
+  "make directory": "mkdir",
+  "create folder": "mkdir",
+  "show current dir": "pwd",
+  "current directory": "pwd",
+  "go up": "cd ..",
+  "change directory to": "cd",
+  "delete file": "rm",
+  "remove directory": "rmdir"
 }
