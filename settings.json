@@ -1,6 +1,11 @@
 // settings.json
 {
-  "timeout": 5,
-  "nl_mode": true,
-  "shell": "bash"
+  "color_normal": "lime",
+  "color_error": "red",
+  "color_warning": "orange",
+  "color_info": "cyan",
+  "color_cancel": "yellow",
+  "default_cwd": "",
+  "font_family": "Consolas",
+  "font_size": 10
 }
