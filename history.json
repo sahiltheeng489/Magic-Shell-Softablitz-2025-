@@ -16,5 +16,23 @@
     "cmd": "home",
     "status": "ok",
     "output_len": 154
+  },
+  {
+    "ts": "2025-10-03T16:22:08",
+    "cmd": "ping google.com",
+    "status": "ok",
+    "output_len": 82
+  },
+  {
+    "ts": "2025-10-03T16:27:39",
+    "cmd": "ll",
+    "status": "ok",
+    "output_len": 675
+  },
+  {
+    "ts": "2025-10-03T16:28:47",
+    "cmd": "mkdir",
+    "status": "ok",
+    "output_len": 40
   }
 ]

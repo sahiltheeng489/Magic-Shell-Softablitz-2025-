@@ -7,7 +7,16 @@ import tkinter.font as tkFont
 from src.core.controller import Controller
 
 def on_controller_output(user_cmd, output):
-    insert_output(f"> {user_cmd}\n{output}\n")
+    # Determine tag type
+    if "Blocked by safety" in output or "Error:" in output or "not found" in output:
+        tag = "error"
+    elif "Warning:" in output:
+        tag = "warning"
+    elif "** Command cancelled" in output or "cancelled by user" in output:
+        tag = "cancel"
+    else:
+        tag = "normal"
+    insert_output(f"> {user_cmd}\n{output}\n", tag=tag)
 
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
@@ -23,7 +32,7 @@ def run_command():
     if user_command.strip():
         cmd_history.append(user_command)
     history_index = len(cmd_history)
-    insert_output(f"> {user_command}\n")
+    insert_output(f"> {user_command}\n", tag="info")
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
     controller.handle_input_async(user_command)
@@ -31,8 +40,13 @@ def run_command():
 
 def cancel_command():
     controller.cancel()
-    insert_output("** Command cancelled by user **\n")
+    insert_output("** Command cancelled by user **\n", tag="cancel")
     run_button.config(state='normal')
+
+def clear_screen():
+    output_area.config(state='normal')
+    output_area.delete(1.0, tk.END)
+    output_area.config(state='disabled')
 
 def on_up(event):
     global history_index
@@ -51,9 +65,9 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
-def insert_output(text):
+def insert_output(text, tag="normal"):
     output_area.config(state='normal')
-    output_area.insert(tk.END, text)
+    output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
 
@@ -71,7 +85,10 @@ run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
 
 cancel_button = tk.Button(window, text="Cancel", command=cancel_command)
-cancel_button.pack(pady=5)
+cancel_button.pack(pady=2)
+
+clear_button = tk.Button(window, text="Clear Screen", command=clear_screen)
+clear_button.pack(pady=2)
 
 output_area = tk.Text(window, height=30, width=100,
                       bg="black", fg="lime",
@@ -79,6 +96,12 @@ output_area = tk.Text(window, height=30, width=100,
                       font=terminal_font,
                       state='disabled')
 output_area.pack(pady=5)
+
+output_area.tag_config("normal", foreground="lime")
+output_area.tag_config("error", foreground="red")
+output_area.tag_config("warning", foreground="orange")
+output_area.tag_config("info", foreground="cyan")
+output_area.tag_config("cancel", foreground="yellow")
 
 scrollbar = tk.Scrollbar(window, command=output_area.yview)
 output_area.config(yscrollcommand=scrollbar.set)
