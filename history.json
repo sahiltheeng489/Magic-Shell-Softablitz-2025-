@@ -82,5 +82,65 @@
     "cmd": "ping google.com",
     "status": "ok",
     "output_len": 82
+  },
+  {
+    "ts": "2025-10-04T10:13:12",
+    "cmd": "make folder demo",
+    "status": "ok",
+    "output_len": 40
+  },
+  {
+    "ts": "2025-10-04T10:13:37",
+    "cmd": "make folder test",
+    "status": "ok",
+    "output_len": 40
+  },
+  {
+    "ts": "2025-10-04T10:13:54",
+    "cmd": "mkdir test",
+    "status": "ok",
+    "output_len": 0
+  },
+  {
+    "ts": "2025-10-04T10:13:59",
+    "cmd": "ls",
+    "status": "ok",
+    "output_len": 719
+  },
+  {
+    "ts": "2025-10-04T10:14:20",
+    "cmd": "rm test",
+    "status": "ok",
+    "output_len": 91
+  },
+  {
+    "ts": "2025-10-04T10:15:10",
+    "cmd": "go up",
+    "status": "ok",
+    "output_len": 0
+  },
+  {
+    "ts": "2025-10-04T10:20:44",
+    "cmd": "ls",
+    "status": "ok",
+    "output_len": 771
+  },
+  {
+    "ts": "2025-10-04T10:20:47",
+    "cmd": "dir",
+    "status": "ok",
+    "output_len": 771
+  },
+  {
+    "ts": "2025-10-04T10:21:05",
+    "cmd": "make foldertest",
+    "status": "ok",
+    "output_len": 93
+  },
+  {
+    "ts": "2025-10-04T10:21:17",
+    "cmd": "make folder test",
+    "status": "ok",
+    "output_len": 40
   }
 ]
