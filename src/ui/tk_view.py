@@ -1,13 +1,50 @@
 import sys
 import os
+import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 import tkinter as tk
 import tkinter.font as tkFont
 from src.core.controller import Controller
 
+def load_settings():
+    settings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'settings.json'))
+    defaults = {
+        "color_normal": "lime",
+        "color_error": "red",
+        "color_warning": "orange",
+        "color_info": "cyan",
+        "color_cancel": "yellow",
+        "default_cwd": "",
+        "font_family": "Consolas",
+        "font_size": 10
+    }
+    try:
+        with open(settings_path, 'r', encoding='utf-8') as f:
+            loaded = json.load(f)
+            defaults.update(loaded)
+    except Exception:
+        pass
+    return defaults
+
+config = load_settings()
+
+if config.get("default_cwd"):
+    try:
+        os.chdir(config["default_cwd"])
+    except Exception:
+        pass
+
 def on_controller_output(user_cmd, output):
-    insert_output(f"> {user_cmd}\n{output}\n")
+    if "Blocked by safety" in output or "Error:" in output or "not found" in output:
+        tag = "error"
+    elif "Warning:" in output:
+        tag = "warning"
+    elif "** Command cancelled" in output or "cancelled by user" in output:
+        tag = "cancel"
+    else:
+        tag = "normal"
+    insert_output(f"> {user_cmd}\n{output}\n", tag=tag)
 
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
@@ -23,7 +60,7 @@ def run_command():
     if user_command.strip():
         cmd_history.append(user_command)
     history_index = len(cmd_history)
-    insert_output(f"> {user_command}\n")
+    insert_output(f"> {user_command}\n", tag="info")
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
     controller.handle_input_async(user_command)
@@ -31,8 +68,13 @@ def run_command():
 
 def cancel_command():
     controller.cancel()
-    insert_output("** Command cancelled by user **\n")
+    insert_output("** Command cancelled by user **\n", tag="cancel")
     run_button.config(state='normal')
+
+def clear_screen():
+    output_area.config(state='normal')
+    output_area.delete(1.0, tk.END)
+    output_area.config(state='disabled')
 
 def on_up(event):
     global history_index
@@ -51,16 +93,16 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
-def insert_output(text):
+def insert_output(text, tag="normal"):
     output_area.config(state='normal')
-    output_area.insert(tk.END, text)
+    output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
 
 window = tk.Tk()
 window.title("Magic Shell UI")
 
-terminal_font = tkFont.Font(family="Consolas", size=10)
+terminal_font = tkFont.Font(family=config["font_family"], size=config["font_size"])
 
 entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
@@ -71,14 +113,23 @@ run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
 
 cancel_button = tk.Button(window, text="Cancel", command=cancel_command)
-cancel_button.pack(pady=5)
+cancel_button.pack(pady=2)
+
+clear_button = tk.Button(window, text="Clear Screen", command=clear_screen)
+clear_button.pack(pady=2)
 
 output_area = tk.Text(window, height=30, width=100,
-                      bg="black", fg="lime",
+                      bg="black", fg=config["color_normal"],
                       insertbackground="white",
                       font=terminal_font,
                       state='disabled')
 output_area.pack(pady=5)
+
+output_area.tag_config("normal", foreground=config["color_normal"])
+output_area.tag_config("error", foreground=config["color_error"])
+output_area.tag_config("warning", foreground=config["color_warning"])
+output_area.tag_config("info", foreground=config["color_info"])
+output_area.tag_config("cancel", foreground=config["color_cancel"])
 
 scrollbar = tk.Scrollbar(window, command=output_area.yview)
 output_area.config(yscrollcommand=scrollbar.set)
