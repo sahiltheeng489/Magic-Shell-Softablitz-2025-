@@ -59,3 +59,6 @@ class PhraseMapper:
     def _move_cmd(self, match):
         src = match.group(3).strip()
         dst = match.group(4).strip()
+    def _cd_to_path(self, match):
+        path = match.group(2).strip()
+        return f"cd {path}"
