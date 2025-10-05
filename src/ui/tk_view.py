@@ -6,7 +6,6 @@ import tkinter.font as tkFont
 import tkinter.messagebox as messagebox
 from src.core.controller import Controller
 
-
 def load_settings():
     settings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'settings.json'))
     defaults = {
@@ -27,16 +26,13 @@ def load_settings():
         pass
     return defaults
 
-
 config = load_settings()
-
 
 if config.get("default_cwd"):
     try:
         os.chdir(config["default_cwd"])
     except Exception:
         pass
-
 
 def on_controller_output(user_cmd, output):
     if "Blocked by safety" in output or "Error:" in output or "not found" in output:
@@ -49,17 +45,16 @@ def on_controller_output(user_cmd, output):
         tag = "normal"
     insert_output(f"> {user_cmd}\n{output}\n", tag=tag)
 
-
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
 
-
 controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
-
 
 cmd_history = []
 history_index = -1
 
+SIMILARITY_THRESHOLD = 0.6
+WARN_THRESHOLD = 0.4
 
 def run_command():
     global history_index
@@ -88,6 +83,17 @@ def run_command():
         run_button.config(state='normal')
         return
 
+    # Semantic confidence check
+    template, mapped_command, score = controller.matcher.match(user_command)
+    if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+        confirm = messagebox.askyesno(
+            "Low Confidence Match",
+            f"The closest match is '{template}' with confidence {score:.2f}.\nRun mapped command '{mapped_command}' anyway?")
+        if not confirm:
+            insert_output("Command cancelled by user.\n", tag="cancel")
+            run_button.config(state='normal')
+            return
+
     # Preview and confirm harmful commands
     mapped_cmd = controller.mapper.map_phrase(user_command)
     if controller.safety.needs_warning(mapped_cmd):
@@ -99,24 +105,20 @@ def run_command():
             run_button.config(state='normal')
             return
 
-    # Use semantic matcher enhanced controller handle_input
+    # Run input via controller.handle_input (which calls semantic matcher internally)
     output = controller.handle_input(user_command)
     insert_output(f"> {user_command}\n{output}\n", tag="normal")
-
     run_button.config(state='normal')
-
 
 def cancel_command():
     controller.cancel()
     insert_output("** Command cancelled by user **\n", tag="cancel")
     run_button.config(state='normal')
 
-
 def clear_screen():
     output_area.config(state='normal')
     output_area.delete(1.0, tk.END)
     output_area.config(state='disabled')
-
 
 def on_up(event):
     global history_index
@@ -124,7 +126,6 @@ def on_up(event):
         history_index -= 1
         entry.delete(0, tk.END)
         entry.insert(0, cmd_history[history_index])
-
 
 def on_down(event):
     global history_index
@@ -136,38 +137,30 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
-
 def insert_output(text, tag="normal"):
     output_area.config(state='normal')
     output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
 
-
 window = tk.Tk()
 window.title("Magic Shell UI")
 
-
 terminal_font = tkFont.Font(family=config["font_family"], size=config["font_size"])
-
 
 entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
 entry.bind("<Up>", on_up)
 entry.bind("<Down>", on_down)
 
-
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
-
 
 cancel_button = tk.Button(window, text="Cancel", command=cancel_command)
 cancel_button.pack(pady=2)
 
-
 clear_button = tk.Button(window, text="Clear Screen", command=clear_screen)
 clear_button.pack(pady=2)
-
 
 output_area = tk.Text(window, height=30, width=100,
                       bg="black", fg=config["color_normal"],
@@ -176,21 +169,17 @@ output_area = tk.Text(window, height=30, width=100,
                       state='disabled')
 output_area.pack(pady=5)
 
-
 output_area.tag_config("normal", foreground=config["color_normal"])
 output_area.tag_config("error", foreground=config["color_error"])
 output_area.tag_config("warning", foreground=config["color_warning"])
 output_area.tag_config("info", foreground=config["color_info"])
 output_area.tag_config("cancel", foreground=config["color_cancel"])
 
-
 scrollbar = tk.Scrollbar(window, command=output_area.yview)
 output_area.config(yscrollcommand=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-
 cwd_label = tk.Label(window, text=f"cwd: {controller.get_cwd()}", anchor="w")
 cwd_label.pack(fill="x")
-
 
 window.mainloop()
