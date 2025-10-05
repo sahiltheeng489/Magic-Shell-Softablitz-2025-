@@ -1,6 +1,7 @@
 import sys
 import signal
 
+
 if sys.platform == "win32":
     try:
         import pyreadline as readline
@@ -10,7 +11,9 @@ if sys.platform == "win32":
 else:
     import readline
 
+
 from src.core.controller import Controller
+
 
 # ANSI color codes for coloring console output
 COLOR_RESET = "\033[0m"
@@ -20,8 +23,10 @@ COLOR_INFO = "\033[96m"
 COLOR_NORMAL = "\033[92m"
 COLOR_CANCEL = "\033[93m"
 
+
 def color_text(text, color_code):
     return f"{color_code}{text}{COLOR_RESET}"
+
 
 def print_output(output):
     if "Error:" in output or "Blocked by safety" in output:
@@ -33,15 +38,19 @@ def print_output(output):
     else:
         print(color_text(output, COLOR_NORMAL))
 
+
 def signal_handler(sig, frame):
     print("\nCommand cancelled by user.")
     # Continue to prompt again
+
 
 def main():
     controller = Controller()
     print(color_text("Magic Shell CLI (Type 'help' for commands, 'exit' or 'quit' to exit)", COLOR_INFO))
 
+
     signal.signal(signal.SIGINT, signal_handler)
+
 
     while True:
         try:
@@ -53,8 +62,10 @@ def main():
             print("\nCommand cancelled by user.")
             continue
 
+
         if not user_input:
             continue
+
 
         # Handle AI prefix
         if user_input.lower().startswith("/ai"):
@@ -62,6 +73,7 @@ def main():
             # Placeholder for AI response, later integrate with OpenAI, Ollama, etc.
             print(color_text(f"AI response (simulated): '{prompt}'", COLOR_INFO))
             continue
+
 
         # Handle help command
         if user_input.lower() == "help":
@@ -73,11 +85,14 @@ def main():
                 COLOR_INFO))
             continue
 
+
         if user_input.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
 
+
         # Preview and ask confirmation for risky commands
+        # Note: Using semantic enhanced mapping happens inside handle_input
         cmd_mapped = controller.mapper.map_phrase(user_input)
         if controller.safety.needs_warning(cmd_mapped):
             print(color_text("WARNING: Risky command detected!", COLOR_WARNING))
@@ -87,8 +102,10 @@ def main():
                 print(color_text("Command cancelled.", COLOR_CANCEL))
                 continue
 
+        # Run input via controller.handle_input (which calls semantic matcher internally)
         output = controller.handle_input(user_input)
         print_output(output)
+
 
 if __name__ == "__main__":
     main()
