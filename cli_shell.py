@@ -24,6 +24,10 @@ COLOR_NORMAL = "\033[92m"
 COLOR_CANCEL = "\033[93m"
 
 
+SIMILARITY_THRESHOLD = 0.6
+WARN_THRESHOLD = 0.4
+
+
 def color_text(text, color_code):
     return f"{color_code}{text}{COLOR_RESET}"
 
@@ -48,9 +52,7 @@ def main():
     controller = Controller()
     print(color_text("Magic Shell CLI (Type 'help' for commands, 'exit' or 'quit' to exit)", COLOR_INFO))
 
-
     signal.signal(signal.SIGINT, signal_handler)
-
 
     while True:
         try:
@@ -62,10 +64,8 @@ def main():
             print("\nCommand cancelled by user.")
             continue
 
-
         if not user_input:
             continue
-
 
         # Handle AI prefix
         if user_input.lower().startswith("/ai"):
@@ -73,7 +73,6 @@ def main():
             # Placeholder for AI response, later integrate with OpenAI, Ollama, etc.
             print(color_text(f"AI response (simulated): '{prompt}'", COLOR_INFO))
             continue
-
 
         # Handle help command
         if user_input.lower() == "help":
@@ -85,14 +84,21 @@ def main():
                 COLOR_INFO))
             continue
 
-
         if user_input.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
 
+        # Semantic match for confirmation warning
+        template, command, score = controller.matcher.match(user_input)
+
+        if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+            print(color_text(f"Warning: Low confidence match '{template}', score: {score:.2f}", COLOR_WARNING))
+            confirm = input(color_text(f"Run mapped command '{command}' anyway? (y/N): ", COLOR_WARNING)).strip().lower()
+            if confirm != 'y':
+                print(color_text("Command cancelled by user.", COLOR_CANCEL))
+                continue
 
         # Preview and ask confirmation for risky commands
-        # Note: Using semantic enhanced mapping happens inside handle_input
         cmd_mapped = controller.mapper.map_phrase(user_input)
         if controller.safety.needs_warning(cmd_mapped):
             print(color_text("WARNING: Risky command detected!", COLOR_WARNING))
