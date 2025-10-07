@@ -18,6 +18,7 @@ class PhraseMapper:
             (re.compile(r'.*\b(list|show|display)\b.*\b(files|folders|directories|dir)\b.*', re.I), self._ls_cmd),
             # Go up one level
             (re.compile(r'.*\b(go up|up one level|parent directory|cd ..)\b.*', re.I), 'cd ..'),
+<<<<<<< HEAD
             # Change directory to a specific path
             (re.compile(r'.*\b(change directory to|cd to|switch to)\b\s*(\S+)', re.I), self._cd_to_path),
             # Copy file
@@ -25,6 +26,9 @@ class PhraseMapper:
             # Move file
             (re.compile(r'.*\b(move)\b.*\b(file)\b\s*([^ ]+)\s+to\s+(.+)', re.I), self._move_cmd),
             # Add more patterns as needed...
+==
+            # Add more natural language patterns here
+>>>>>>> rajeev
         ]
 
     def _mkdir_cmd(self, match):
