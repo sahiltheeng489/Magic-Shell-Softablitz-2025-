@@ -1,10 +1,9 @@
 import sys
 import os
 import json
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 import tkinter as tk
 import tkinter.font as tkFont
+import tkinter.messagebox as messagebox
 from src.core.controller import Controller
 
 def load_settings():
@@ -60,9 +59,38 @@ def run_command():
     if user_command.strip():
         cmd_history.append(user_command)
     history_index = len(cmd_history)
-    insert_output(f"> {user_command}\n", tag="info")
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
+
+    # /ai prefix support (simulated)
+    if user_command.strip().startswith("/ai"):
+        prompt = user_command.strip()[3:].strip()
+        insert_output(f"AI: (simulated) Response for prompt: '{prompt}'\n", tag="info")
+        run_button.config(state='normal')
+        return
+
+    # Help command
+    if user_command.strip().lower() == "help":
+        insert_output(
+            "Magic Shell Help:\n"
+            "- Standard shell and natural language commands supported\n"
+            "- Use '/ai <question>' for AI assistance\n"
+            "- Use 'exit' to leave GUI\n",
+            tag="info")
+        run_button.config(state='normal')
+        return
+
+    # Preview and confirm harmful commands
+    mapped_cmd = controller.mapper.map_phrase(user_command)
+    if controller.safety.needs_warning(mapped_cmd):
+        confirm = messagebox.askyesno(
+            "Warning: Risky Command",
+            f"Risky command detected:\n\n{mapped_cmd}\n\nAre you sure you want to run it?")
+        if not confirm:
+            insert_output("Command cancelled by user.\n", tag="cancel")
+            run_button.config(state='normal')
+            return
+
     controller.handle_input_async(user_command)
     window.after(200, lambda: run_button.config(state='normal'))
 
