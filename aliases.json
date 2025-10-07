@@ -10,5 +10,6 @@
   "go up": "cd ..",
   "change directory to": "cd",
   "delete file": "rm",
-  "remove directory": "rmdir"
+  "remove directory": "rmdir",
+  "clear screen" : "cls"
 }
