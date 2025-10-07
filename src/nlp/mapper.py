@@ -7,7 +7,7 @@ class PhraseMapper:
             (re.compile(r'.*\b(remove|delete|del)\b.*\b(file|folder|directory|dir)\b\s*(.*)', re.I), self._rm_cmd),
             (re.compile(r'.*\b(show|display|list)\b.*\b(current|present)\b.*\b(directory|folder|dir)\b.*', re.I), 'pwd'),
             (re.compile(r'.*\b(go up|up one level|parent directory|cd ..)\b.*', re.I), 'cd ..'),
-            (re.compile(r'.*\b(change directory to|cd to|switch to)\b\s*(\S+)', re.I), self._cd_to_path),
+            # (re.compile(r'.*\b(change directory to|cd to|switch to)\b\s*(\S+)', re.I), self._cd_to_path),
             # Add more natural language patterns here
         ]
 
