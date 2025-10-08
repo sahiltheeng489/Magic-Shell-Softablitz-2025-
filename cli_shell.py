@@ -1,6 +1,7 @@
 import sys
 import signal
 
+
 if sys.platform == "win32":
     try:
         import pyreadline as readline
@@ -10,7 +11,9 @@ if sys.platform == "win32":
 else:
     import readline
 
+
 from src.core.controller import Controller
+
 
 # ANSI color codes for coloring console output
 COLOR_RESET = "\033[0m"
@@ -20,8 +23,14 @@ COLOR_INFO = "\033[96m"
 COLOR_NORMAL = "\033[92m"
 COLOR_CANCEL = "\033[93m"
 
+
+SIMILARITY_THRESHOLD = 0.6
+WARN_THRESHOLD = 0.4
+
+
 def color_text(text, color_code):
     return f"{color_code}{text}{COLOR_RESET}"
+
 
 def print_output(output):
     if "Error:" in output or "Blocked by safety" in output:
@@ -33,9 +42,11 @@ def print_output(output):
     else:
         print(color_text(output, COLOR_NORMAL))
 
+
 def signal_handler(sig, frame):
     print("\nCommand cancelled by user.")
     # Continue to prompt again
+
 
 def main():
     controller = Controller()
@@ -77,6 +88,16 @@ def main():
             print("Goodbye!")
             break
 
+        # Semantic match for confirmation warning
+        template, command, score = controller.matcher.match(user_input)
+
+        if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+            print(color_text(f"Warning: Low confidence match '{template}', score: {score:.2f}", COLOR_WARNING))
+            confirm = input(color_text(f"Run mapped command '{command}' anyway? (y/N): ", COLOR_WARNING)).strip().lower()
+            if confirm != 'y':
+                print(color_text("Command cancelled by user.", COLOR_CANCEL))
+                continue
+
         # Preview and ask confirmation for risky commands
         cmd_mapped = controller.mapper.map_phrase(user_input)
         if controller.safety.needs_warning(cmd_mapped):
@@ -87,8 +108,10 @@ def main():
                 print(color_text("Command cancelled.", COLOR_CANCEL))
                 continue
 
+        # Run input via controller.handle_input (which calls semantic matcher internally)
         output = controller.handle_input(user_input)
         print_output(output)
+
 
 if __name__ == "__main__":
     main()

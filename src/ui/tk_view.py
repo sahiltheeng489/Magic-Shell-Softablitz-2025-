@@ -53,6 +53,9 @@ controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_ch
 cmd_history = []
 history_index = -1
 
+SIMILARITY_THRESHOLD = 0.6
+WARN_THRESHOLD = 0.4
+
 def run_command():
     global history_index
     user_command = entry.get()
@@ -80,6 +83,17 @@ def run_command():
         run_button.config(state='normal')
         return
 
+    # Semantic confidence check
+    template, mapped_command, score = controller.matcher.match(user_command)
+    if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+        confirm = messagebox.askyesno(
+            "Low Confidence Match",
+            f"The closest match is '{template}' with confidence {score:.2f}.\nRun mapped command '{mapped_command}' anyway?")
+        if not confirm:
+            insert_output("Command cancelled by user.\n", tag="cancel")
+            run_button.config(state='normal')
+            return
+
     # Preview and confirm harmful commands
     mapped_cmd = controller.mapper.map_phrase(user_command)
     if controller.safety.needs_warning(mapped_cmd):
@@ -91,8 +105,10 @@ def run_command():
             run_button.config(state='normal')
             return
 
-    controller.handle_input_async(user_command)
-    window.after(200, lambda: run_button.config(state='normal'))
+    # Run input via controller.handle_input (which calls semantic matcher internally)
+    output = controller.handle_input(user_command)
+    insert_output(f"> {user_command}\n{output}\n", tag="normal")
+    run_button.config(state='normal')
 
 def cancel_command():
     controller.cancel()
