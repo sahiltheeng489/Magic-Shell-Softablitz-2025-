@@ -1,8 +1,6 @@
-import re
 import os
+import re
 import json
-
-IS_WINDOWS = os.name == "nt"
 
 class PhraseMapper:
     def __init__(self):
@@ -14,9 +12,9 @@ class PhraseMapper:
         self.patterns = [
             # Make/Create directory/folder/dir
             (re.compile(r'.*\b(make|create)\b.*\b(folder|directory|dir)\b\s*(.*)', re.I), self._mkdir_cmd),
-            # Remove/Delete file (file only)
+            # Remove/Delete file
             (re.compile(r'.*\b(remove|delete|del)\b.*\b(file)\b\s*(.*)', re.I), self._rm_file_cmd),
-            # Remove/Delete folder/directory/dir (whole folders)
+            # Remove/Delete folder/directory/dir
             (re.compile(r'.*\b(remove|delete|del)\b.*\b(folder|directory|dir)\b\s*(.*)', re.I), self._rm_folder_cmd),
             # Show current directory
             (re.compile(r'.*\b(show|display|list)\b.*\b(current|present)\b.*\b(directory|folder|dir)\b.*', re.I), self._pwd_cmd),
@@ -30,7 +28,6 @@ class PhraseMapper:
             (re.compile(r'.*\b(copy)\b.*\b(file)\b\s*([^ ]+)\s+to\s+(.+)', re.I), self._copy_cmd),
             # Move file
             (re.compile(r'.*\b(move)\b.*\b(file)\b\s*([^ ]+)\s+to\s+(.+)', re.I), self._move_cmd),
-            # Add more patterns as needed...
         ]
 
     def _mkdir_cmd(self, match):
@@ -40,19 +37,47 @@ class PhraseMapper:
     def _rm_file_cmd(self, match):
         filename = match.group(3).strip()
         if not filename:
-            return "del" if IS_WINDOWS else "rm"
-        return f"del {filename}" if IS_WINDOWS else f"rm {filename}"
+            return "del" if os.name == "nt" else "rm"
+        return f"del {filename}" if os.name == "nt" else f"rm {filename}"
 
     def _rm_folder_cmd(self, match):
         foldername = match.group(3).strip()
         if not foldername:
-            return "rmdir /s /q" if IS_WINDOWS else "rm -rf"
-        return f"rmdir /s /q {foldername}" if IS_WINDOWS else f"rm -rf {foldername}"
+            return "rmdir /s /q" if os.name == "nt" else "rm -rf"
+        return f"rmdir /s /q {foldername}" if os.name == "nt" else f"rm -rf {foldername}"
 
     def _ls_cmd(self, match):
-        # For listing, use 'dir' on Windows, 'ls' elsewhere
-        return "dir" if IS_WINDOWS else "ls"
+        return "dir" if os.name == "nt" else "ls"
 
     def _pwd_cmd(self, match):
-        # For showing current directory, use 'cd' on Windows, 'pwd' elsewhere
-        return
+        return "cd" if os.name == "nt" else "pwd"
+
+    def _cd_to_path(self, match):
+        path = match.group(2).strip()
+        return f"cd {path}"
+
+    def _copy_cmd(self, match):
+        src = match.group(3).strip()
+        dst = match.group(4).strip()
+        if os.name == "nt":
+            return f"copy {src} {dst}"
+        else:
+            return f"cp {src} {dst}"
+
+    def _move_cmd(self, match):
+        src = match.group(3).strip()
+        dst = match.group(4).strip()
+        if os.name == "nt":
+            return f"move {src} {dst}"
+        else:
+            return f"mv {src} {dst}"
+
+    def map_phrase(self, user_input):
+        for pattern, handler in self.patterns:
+            match = pattern.match(user_input)
+            if match:
+                if callable(handler):
+                    return handler(match)
+                else:
+                    return handler
+        return user_input  # fallback if no pattern matches

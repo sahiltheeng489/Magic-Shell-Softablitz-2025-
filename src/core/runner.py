@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import signal
 
+
 class CommandRunner:
     def __init__(self):
         self.is_windows = platform.system().lower() == 'windows'
