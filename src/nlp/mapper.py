@@ -21,6 +21,7 @@ class PhraseMapper:
             # List files/folders
             (re.compile(r'.*\b(list|show|display)\b.*\b(files|folders|directories|dir)\b.*', re.I), self._ls_cmd),
             # Go up one level
+
             (re.compile(r'.*\b(go up|up one level|parent directory|cd ..)\b.*', re.I), "cd .."),
             # Change directory to a specific path
             (re.compile(r'.*\b(change directory to|cd to|switch to)\b\s*(\S+)', re.I), self._cd_to_path),
