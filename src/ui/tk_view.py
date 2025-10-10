@@ -68,7 +68,7 @@ if config.get("default_cwd"):
     except Exception:
         pass
 
-controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
+
 
 def on_controller_output(user_cmd, output):
     if "Blocked by safety" in output or "Error:" in output or "not found" in output:
@@ -84,7 +84,9 @@ def on_controller_output(user_cmd, output):
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
 
-def run_command():
+controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
+
+def run_command(event=None):
     global history_index
     user_command = entry.get().strip()
     if not user_command:
@@ -143,7 +145,6 @@ def run_command():
             return
 
     output = controller.handle_input(user_command)
-    insert_output(f"> {user_command}\n{output}\n", tag="normal")
     run_button.config(state='normal')
 
 def cancel_command():
@@ -179,6 +180,17 @@ def insert_output(text, tag="normal"):
     output_area.config(state='disabled')
     output_area.see(tk.END)
 
+def autocomplete(event):
+    current_text = entry.get()
+    if not current_text:
+        return "break"
+    matches = [cmd for cmd in cmd_history if cmd.startswith(current_text)]
+    if matches:
+        entry.delete(0, tk.END)
+        entry.insert(0, matches[0])
+        entry.icursor(tk.END)  # Move cursor to end
+    return "break"
+
 window = tk.Tk()
 window.title("Magic Shell UI")
 
@@ -189,6 +201,7 @@ entry.pack(pady=5)
 entry.bind("<Up>", on_up)
 entry.bind("<Down>", on_down)
 entry.bind("<Return>", lambda event: run_command())
+entry.bind("<Tab>", autocomplete)
 
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)

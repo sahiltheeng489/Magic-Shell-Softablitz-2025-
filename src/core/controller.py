@@ -2,6 +2,7 @@ from src.nlp.mapper import PhraseMapper
 from src.nlp.semantic_matcher import SemanticMatcher
 from src.core.runner import CommandRunner  # Import the correct runner class
 from src.core.safety import Safety
+from src.history_manager import add_to_history  # New import for history
 
 
 SIMILARITY_THRESHOLD = 0.6
@@ -20,6 +21,9 @@ class Controller:
         self.matcher = SemanticMatcher("aliases.json")
 
     def handle_input(self, user_text):
+        # Save user command to persistent history
+        add_to_history(user_text)
+
         template, command, score = self.matcher.match(user_text)
 
         if score >= SIMILARITY_THRESHOLD:
