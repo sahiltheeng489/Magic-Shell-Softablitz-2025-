@@ -168,6 +168,7 @@ entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
 entry.bind("<Up>", on_up)
 entry.bind("<Down>", on_down)
+entry.bind("<Return>", lambda event: run_command())
 
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
