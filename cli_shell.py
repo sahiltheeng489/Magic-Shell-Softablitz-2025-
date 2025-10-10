@@ -1,6 +1,6 @@
+from src.ai.ollama_client import ollama_chat
 import sys
 import signal
-
 
 if sys.platform == "win32":
     try:
@@ -11,9 +11,7 @@ if sys.platform == "win32":
 else:
     import readline
 
-
 from src.core.controller import Controller
-
 
 # ANSI color codes for coloring console output
 COLOR_RESET = "\033[0m"
@@ -23,14 +21,11 @@ COLOR_INFO = "\033[96m"
 COLOR_NORMAL = "\033[92m"
 COLOR_CANCEL = "\033[93m"
 
-
 SIMILARITY_THRESHOLD = 0.6
 WARN_THRESHOLD = 0.4
 
-
 def color_text(text, color_code):
     return f"{color_code}{text}{COLOR_RESET}"
-
 
 def print_output(output):
     if "Error:" in output or "Blocked by safety" in output:
@@ -42,11 +37,9 @@ def print_output(output):
     else:
         print(color_text(output, COLOR_NORMAL))
 
-
 def signal_handler(sig, frame):
     print("\nCommand cancelled by user.")
     # Continue to prompt again
-
 
 def main():
     controller = Controller()
@@ -67,11 +60,11 @@ def main():
         if not user_input:
             continue
 
-        # Handle AI prefix
+        # Handle AI prefix with Ollama
         if user_input.lower().startswith("/ai"):
             prompt = user_input[3:].strip()
-            # Placeholder for AI response, later integrate with OpenAI, Ollama, etc.
-            print(color_text(f"AI response (simulated): '{prompt}'", COLOR_INFO))
+            ai_response = ollama_chat(prompt)
+            print(color_text(f"AI: {ai_response}", COLOR_INFO))
             continue
 
         # Handle help command
@@ -111,7 +104,6 @@ def main():
         # Run input via controller.handle_input (which calls semantic matcher internally)
         output = controller.handle_input(user_input)
         print_output(output)
-
 
 if __name__ == "__main__":
     main()
