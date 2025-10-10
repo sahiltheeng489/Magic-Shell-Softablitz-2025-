@@ -1,6 +1,7 @@
 from src.ai.ollama_client import ollama_chat
 import sys
 import signal
+from src.history_manager import load_history, add_to_history, get_history_output
 
 if sys.platform == "win32":
     try:
@@ -13,7 +14,6 @@ else:
 
 from src.core.controller import Controller
 
-# ANSI color codes for coloring console output
 COLOR_RESET = "\033[0m"
 COLOR_ERROR = "\033[91m"
 COLOR_WARNING = "\033[93m"
@@ -39,11 +39,12 @@ def print_output(output):
 
 def signal_handler(sig, frame):
     print("\nCommand cancelled by user.")
-    # Continue to prompt again
 
 def main():
     controller = Controller()
     print(color_text("Magic Shell CLI (Type 'help' for commands, 'exit' or 'quit' to exit)", COLOR_INFO))
+
+    load_history()  # Load history from file at startup
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -59,6 +60,15 @@ def main():
 
         if not user_input:
             continue
+
+        # Show command history if requested
+        if user_input.lower() == "history":
+            output = get_history_output()
+            print_output(output)
+            continue
+
+        # Add command to history if not 'history'
+        add_to_history(user_input)
 
         # Handle AI prefix with Ollama
         if user_input.lower().startswith("/ai"):

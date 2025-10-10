@@ -3,13 +3,13 @@ import platform
 import os
 from pathlib import Path
 import signal
-
+from src.history_manager import load_history, add_to_history, get_history_output
 
 class CommandRunner:
     def __init__(self):
         self.is_windows = platform.system().lower() == 'windows'
         self.cwd = os.getcwd()
-        self.process = None  # Store current running process
+        self.process = None
 
     def _translate(self, command: str) -> str:
         c = command.strip()
@@ -22,9 +22,7 @@ class CommandRunner:
 
     def _handle_cd(self, command: str) -> str | None:
         parts = command.strip().split(maxsplit=1)
-        if not parts:
-            return None
-        if parts[0].lower() != 'cd':
+        if not parts or parts[0].lower() != 'cd':
             return None
         if len(parts) == 1:
             return self.cwd + '\n'
@@ -64,7 +62,6 @@ class CommandRunner:
     def cancel(self):
         if self.process:
             if self.is_windows:
-                # Send CTRL_BREAK_EVENT to subprocess group
                 self.process.send_signal(signal.CTRL_BREAK_EVENT)
             else:
                 self.process.terminate()
@@ -72,3 +69,18 @@ class CommandRunner:
 
     def get_cwd(self) -> str:
         return self.cwd
+
+    def run_command(self, cmd):
+        cmd = cmd.strip()
+        if not cmd:
+            return
+        # Show command history if user types 'history'
+        if cmd == "history":
+            output = get_history_output()
+            print(output)  # Or update GUI output
+            return
+        # Save command to history
+        add_to_history(cmd)
+
+        # Run command normally
+        return self.run(cmd)

@@ -4,8 +4,40 @@ import json
 import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.messagebox as messagebox
+from functools import partial
 from src.core.controller import Controller
 from src.ai.ollama_client import ollama_chat  # Import Ollama client
+
+HISTORY_FILE = "history.json"
+cmd_history = []
+history_index = -1
+
+def load_history():
+    global cmd_history
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                cmd_history = json.load(f)
+        except Exception:
+            cmd_history = []
+    else:
+        cmd_history = []
+
+def save_history():
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cmd_history, f, indent=2)
+    except Exception as e:
+        insert_output(f"[Error saving history: {e}]\n", tag="error")
+
+def add_to_history(cmd):
+    global cmd_history
+    if cmd and (len(cmd_history) == 0 or cmd_history[-1] != cmd):
+        cmd_history.append(cmd)
+        save_history()
+
+def get_history_output():
+    return "\n".join(f"{i+1}: {cmd}" for i, cmd in enumerate(cmd_history))
 
 
 def load_settings():
@@ -28,7 +60,6 @@ def load_settings():
         pass
     return defaults
 
-
 config = load_settings()
 
 if config.get("default_cwd"):
@@ -37,6 +68,7 @@ if config.get("default_cwd"):
     except Exception:
         pass
 
+controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
 
 def on_controller_output(user_cmd, output):
     if "Blocked by safety" in output or "Error:" in output or "not found" in output:
@@ -49,41 +81,36 @@ def on_controller_output(user_cmd, output):
         tag = "normal"
     insert_output(f"> {user_cmd}\n{output}\n", tag=tag)
 
-
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
 
-
-controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
-
-
-cmd_history = []
-history_index = -1
-
-
-SIMILARITY_THRESHOLD = 0.6
-WARN_THRESHOLD = 0.4
-
-
 def run_command():
     global history_index
-    user_command = entry.get()
-    if user_command.strip():
-        cmd_history.append(user_command)
+    user_command = entry.get().strip()
+    if not user_command:
+        return
+
+    if user_command == "history":
+        output = get_history_output()
+        insert_output(output + "\n", tag="info")
+        entry.delete(0, tk.END)
+        return
+
+    add_to_history(user_command)
     history_index = len(cmd_history)
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
 
     # /ai prefix support (real with Ollama)
-    if user_command.strip().startswith("/ai"):
-        prompt = user_command.strip()[3:].strip()
-        ai_response = ollama_chat(prompt)  # Call Ollama locally
-        insert_output(f"AI: {ai_response}\n", tag="info")  # Show response in output
+    if user_command.startswith("/ai"):
+        prompt = user_command[3:].strip()
+        ai_response = ollama_chat(prompt)
+        insert_output(f"AI: {ai_response}\n", tag="info")
         run_button.config(state='normal')
         return
 
     # Help command
-    if user_command.strip().lower() == "help":
+    if user_command.lower() == "help":
         insert_output(
             "Magic Shell Help:\n"
             "- Standard shell and natural language commands supported\n"
@@ -95,7 +122,7 @@ def run_command():
 
     # Semantic confidence check
     template, mapped_command, score = controller.matcher.match(user_command)
-    if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+    if 0.4 <= score < 0.6:
         confirm = messagebox.askyesno(
             "Low Confidence Match",
             f"The closest match is '{template}' with confidence {score:.2f}.\nRun mapped command '{mapped_command}' anyway?")
@@ -115,23 +142,19 @@ def run_command():
             run_button.config(state='normal')
             return
 
-    # Run input via controller.handle_input (which calls semantic matcher internally)
     output = controller.handle_input(user_command)
     insert_output(f"> {user_command}\n{output}\n", tag="normal")
     run_button.config(state='normal')
-
 
 def cancel_command():
     controller.cancel()
     insert_output("** Command cancelled by user **\n", tag="cancel")
     run_button.config(state='normal')
 
-
 def clear_screen():
     output_area.config(state='normal')
     output_area.delete(1.0, tk.END)
     output_area.config(state='disabled')
-
 
 def on_up(event):
     global history_index
@@ -139,7 +162,6 @@ def on_up(event):
         history_index -= 1
         entry.delete(0, tk.END)
         entry.insert(0, cmd_history[history_index])
-
 
 def on_down(event):
     global history_index
@@ -151,13 +173,11 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
-
 def insert_output(text, tag="normal"):
     output_area.config(state='normal')
     output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
-
 
 window = tk.Tk()
 window.title("Magic Shell UI")
@@ -198,5 +218,8 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 cwd_label = tk.Label(window, text=f"cwd: {controller.get_cwd()}", anchor="w")
 cwd_label.pack(fill="x")
+
+
+load_history()  # Load history at startup
 
 window.mainloop()

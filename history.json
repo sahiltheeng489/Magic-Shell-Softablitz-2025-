@@ -184,5 +184,8 @@
     "cmd": "rm -rf",
     "status": "ok",
     "output_len": 91
-  }
+  },
+  "/ai what going on babe",
+  "pwd",
+  "cd .."
 ]
