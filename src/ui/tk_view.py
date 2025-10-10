@@ -5,6 +5,8 @@ import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.messagebox as messagebox
 from src.core.controller import Controller
+from src.ai.ollama_client import ollama_chat  # Import Ollama client
+
 
 def load_settings():
     settings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'settings.json'))
@@ -26,6 +28,7 @@ def load_settings():
         pass
     return defaults
 
+
 config = load_settings()
 
 if config.get("default_cwd"):
@@ -33,6 +36,7 @@ if config.get("default_cwd"):
         os.chdir(config["default_cwd"])
     except Exception:
         pass
+
 
 def on_controller_output(user_cmd, output):
     if "Blocked by safety" in output or "Error:" in output or "not found" in output:
@@ -45,16 +49,21 @@ def on_controller_output(user_cmd, output):
         tag = "normal"
     insert_output(f"> {user_cmd}\n{output}\n", tag=tag)
 
+
 def on_cwd_changed(new_cwd):
     cwd_label.config(text=f"cwd: {new_cwd}")
 
+
 controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
+
 
 cmd_history = []
 history_index = -1
 
+
 SIMILARITY_THRESHOLD = 0.6
 WARN_THRESHOLD = 0.4
+
 
 def run_command():
     global history_index
@@ -65,10 +74,11 @@ def run_command():
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
 
-    # /ai prefix support (simulated)
+    # /ai prefix support (real with Ollama)
     if user_command.strip().startswith("/ai"):
         prompt = user_command.strip()[3:].strip()
-        insert_output(f"AI: (simulated) Response for prompt: '{prompt}'\n", tag="info")
+        ai_response = ollama_chat(prompt)  # Call Ollama locally
+        insert_output(f"AI: {ai_response}\n", tag="info")  # Show response in output
         run_button.config(state='normal')
         return
 
@@ -110,15 +120,18 @@ def run_command():
     insert_output(f"> {user_command}\n{output}\n", tag="normal")
     run_button.config(state='normal')
 
+
 def cancel_command():
     controller.cancel()
     insert_output("** Command cancelled by user **\n", tag="cancel")
     run_button.config(state='normal')
 
+
 def clear_screen():
     output_area.config(state='normal')
     output_area.delete(1.0, tk.END)
     output_area.config(state='disabled')
+
 
 def on_up(event):
     global history_index
@@ -126,6 +139,7 @@ def on_up(event):
         history_index -= 1
         entry.delete(0, tk.END)
         entry.insert(0, cmd_history[history_index])
+
 
 def on_down(event):
     global history_index
@@ -137,11 +151,13 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
+
 def insert_output(text, tag="normal"):
     output_area.config(state='normal')
     output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
+
 
 window = tk.Tk()
 window.title("Magic Shell UI")
