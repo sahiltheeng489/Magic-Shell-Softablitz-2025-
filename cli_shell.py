@@ -95,6 +95,12 @@ def main():
         template, command, score = controller.matcher.match(user_input)
 
         if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+            # Bypass warning prompt for 'pwd' command
+            if user_input.strip().lower() == 'pwd':
+                output = controller.handle_input(user_input)
+                print_output(output)
+                continue
+
             print(color_text(f"Warning: Low confidence match '{template}', score: {score:.2f}", COLOR_WARNING))
             confirm = input(color_text(f"Run mapped command '{command}' anyway? (y/N): ", COLOR_WARNING)).strip().lower()
             if confirm != 'y':

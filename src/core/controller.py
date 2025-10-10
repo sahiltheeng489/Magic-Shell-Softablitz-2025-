@@ -2,12 +2,10 @@ from src.nlp.mapper import PhraseMapper
 from src.nlp.semantic_matcher import SemanticMatcher
 from src.core.runner import CommandRunner  # Import the correct runner class
 from src.core.safety import Safety
-from src.history_manager import add_to_history  # New import for history
-
+from src.history_manager import add_to_history  # Import for history management
 
 SIMILARITY_THRESHOLD = 0.6
 WARN_THRESHOLD = 0.4
-
 
 class Controller:
     def __init__(self, on_output=None, on_cwd_changed=None):
@@ -21,7 +19,16 @@ class Controller:
         self.matcher = SemanticMatcher("aliases.json")
 
     def handle_input(self, user_text):
-        # Save user command to persistent history
+        user_text_stripped = user_text.strip().lower()
+        # Special-case skip warning for 'pwd'
+        if user_text_stripped == "pwd":
+            resolved_command = "pwd"
+            output = self.runner.run(resolved_command)
+            if self.on_output:
+                self.on_output(user_text, output)
+            return output
+
+        # Add to command history
         add_to_history(user_text)
 
         template, command, score = self.matcher.match(user_text)
@@ -41,5 +48,5 @@ class Controller:
         return output
 
     def get_cwd(self) -> str:
-        # Expose current working directory from runner to callers (e.g. GUI)
+        # Expose current working directory from runner to callers (e.g., GUI)
         return self.runner.get_cwd()
