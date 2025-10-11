@@ -1,5 +1,10 @@
 [
   "pwd",
   "exit",
-  "pwd"
+  "pwd",
+  "ls",
+  "clear",
+  "pwd",
+  "clear",
+  "exit"
 ]

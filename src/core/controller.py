@@ -3,6 +3,8 @@ from src.nlp.semantic_matcher import SemanticMatcher
 from src.core.runner import CommandRunner  # Import the correct runner class
 from src.core.safety import Safety
 from src.history_manager import add_to_history  # Import for history management
+from src.core.commands import rename_item
+from src.core.commands import clear_terminal
 
 SIMILARITY_THRESHOLD = 0.6
 WARN_THRESHOLD = 0.4
@@ -30,6 +32,14 @@ class Controller:
 
         # Add to command history
         add_to_history(user_text)
+        args = user_text.strip().split()
+    
+        if len(args) > 0 and args[0] == "rename":
+            if len(args) != 3:
+                return "Usage: rename <old_name> <new_name>"
+            return rename_item(args[1], args[2])
+        if len(args) == 1 and args[0].lower() == "clear":
+            return clear_terminal()
 
         template, command, score = self.matcher.match(user_text)
 
