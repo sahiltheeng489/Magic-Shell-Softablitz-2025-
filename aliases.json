@@ -18,5 +18,9 @@
   "rename folder": "rename" ,
   "clear": "clear",
   "cls": "clear",
-  "clear screen": "clear"
+  "clear screen": "clear" ,
+  "cat": "cat",
+  "show file": "cat",
+  "display file": "cat",
+  "read file": "cat"
 }

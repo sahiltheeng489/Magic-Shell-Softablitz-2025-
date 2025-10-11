@@ -11,3 +11,9 @@ def clear_terminal():
     # Clear screen command for Windows or Unix-based
     os.system("cls" if os.name == "nt" else "clear")
     return "" 
+def show_file_content(filename):
+    try:
+        with open(filename, "r") as f:
+            return f.read()
+    except Exception as e:
+        return f"Error reading '{filename}': {e}"
