@@ -22,5 +22,9 @@
   "cat": "cat",
   "show file": "cat",
   "display file": "cat",
-  "read file": "cat"
+  "read file": "cat" ,
+  "touch": "touch",
+  "create file": "touch",
+  "new file": "touch",
+  "make file": "touch"
 }

@@ -6,6 +6,7 @@ from src.history_manager import add_to_history  # Import for history management
 from src.core.commands import rename_item
 from src.core.commands import clear_terminal
 from src.core.commands import show_file_content
+from src.core.commands import touch_file
 
 
 SIMILARITY_THRESHOLD = 0.6
@@ -47,6 +48,9 @@ class Controller:
         if len(args) == 2 and args[0].lower() == "cat":
             return show_file_content(args[1])
 
+        if len(args) == 2 and args[0].lower() == "touch":
+            return touch_file(args[1])
+        
         template, command, score = self.matcher.match(user_text)
 
         if score >= SIMILARITY_THRESHOLD:

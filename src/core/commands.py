@@ -17,3 +17,10 @@ def show_file_content(filename):
             return f.read()
     except Exception as e:
         return f"Error reading '{filename}': {e}"
+def touch_file(filename):
+    try:
+        with open(filename, 'a'):
+            pass
+        return f"Created file '{filename}' or updated timestamp."
+    except Exception as e:
+        return f"Error creating file '{filename}': {e}"
