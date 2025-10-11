@@ -7,10 +7,12 @@ from src.core.commands import rename_item
 from src.core.commands import clear_terminal
 from src.core.commands import show_file_content
 from src.core.commands import touch_file
+from src.core.commands import remove_file, remove_folder
 
 
 SIMILARITY_THRESHOLD = 0.6
 WARN_THRESHOLD = 0.4
+
 
 class Controller:
     def __init__(self, on_output=None, on_cwd_changed=None):
@@ -36,21 +38,40 @@ class Controller:
         # Add to command history
         add_to_history(user_text)
         args = user_text.strip().split()
-    
-        if len(args) > 0 and args[0] == "rename":
+
+        if len(args) == 0:
+            return "No command entered."
+
+        if args[0] == "rename":
             if len(args) != 3:
                 return "Usage: rename <old_name> <new_name>"
             return rename_item(args[1], args[2])
-        
+
         if len(args) == 1 and args[0].lower() == "clear":
             return clear_terminal()
-        
+
         if len(args) == 2 and args[0].lower() == "cat":
             return show_file_content(args[1])
 
         if len(args) == 2 and args[0].lower() == "touch":
             return touch_file(args[1])
-        
+
+        if len(args) == 2:
+            cmd = args[0].lower()
+            target = args[1]
+
+            if cmd in ["rm", "delete", "del", "removefile", "remove file"]:
+                return remove_file(target)
+
+            if cmd in [
+                "rmdir",
+                "removedir",
+                "remove directory",
+                "removefolder",
+                "remove folder",
+            ]:
+                return remove_folder(target)
+
         template, command, score = self.matcher.match(user_text)
 
         if score >= SIMILARITY_THRESHOLD:

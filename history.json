@@ -1,10 +1,6 @@
 [
-  "pwd",
-  "exit",
-  "pwd",
   "ls",
-  "clear",
-  "pwd",
-  "clear",
-  "exit"
+  "rm sample.txt",
+  "ls",
+  "clear"
 ]
