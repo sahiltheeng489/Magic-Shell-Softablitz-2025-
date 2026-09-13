@@ -125,5 +125,13 @@ class Controller:
 
         return output
 
+    def handle_input_async(self, user_text: str):
+        """Run handle_input in a background thread so the GUI never freezes."""
+        import threading
+        def task():
+            self.handle_input(user_text)
+        t = threading.Thread(target=task, daemon=True)
+        t.start()
+
     def get_cwd(self) -> str:
         return self.runner.get_cwd()

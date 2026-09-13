@@ -1,5 +1,7 @@
+from src.ai.ollama_client import ollama_chat
 import sys
 import signal
+from src.history_manager import load_history, add_to_history, get_history_output
 
 if sys.platform == "win32":
     try:
@@ -12,13 +14,15 @@ else:
 
 from src.core.controller import Controller
 
-# ANSI color codes for coloring console output
 COLOR_RESET = "\033[0m"
 COLOR_ERROR = "\033[91m"
 COLOR_WARNING = "\033[93m"
 COLOR_INFO = "\033[96m"
 COLOR_NORMAL = "\033[92m"
 COLOR_CANCEL = "\033[93m"
+
+SIMILARITY_THRESHOLD = 0.6
+WARN_THRESHOLD = 0.4
 
 def color_text(text, color_code):
     return f"{color_code}{text}{COLOR_RESET}"
@@ -35,11 +39,12 @@ def print_output(output):
 
 def signal_handler(sig, frame):
     print("\nCommand cancelled by user.")
-    # Continue to prompt again
 
 def main():
     controller = Controller()
     print(color_text("Magic Shell CLI (Type 'help' for commands, 'exit' or 'quit' to exit)", COLOR_INFO))
+
+    load_history()  # Load history from file at startup
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -56,11 +61,20 @@ def main():
         if not user_input:
             continue
 
-        # Handle AI prefix
+        # Show command history if requested
+        if user_input.lower() == "history":
+            output = get_history_output()
+            print_output(output)
+            continue
+
+        # Add command to history if not 'history'
+        add_to_history(user_input)
+
+        # Handle AI prefix with Ollama
         if user_input.lower().startswith("/ai"):
             prompt = user_input[3:].strip()
-            # Placeholder for AI response, later integrate with OpenAI, Ollama, etc.
-            print(color_text(f"AI response (simulated): '{prompt}'", COLOR_INFO))
+            ai_response = ollama_chat(prompt)
+            print(color_text(f"AI: {ai_response}", COLOR_INFO))
             continue
 
         # Handle help command
@@ -77,6 +91,22 @@ def main():
             print("Goodbye!")
             break
 
+        # Semantic match for confirmation warning
+        template, command, score = controller.matcher.match(user_input)
+
+        if WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
+            # Bypass warning prompt for 'pwd' command
+            if user_input.strip().lower() == 'pwd':
+                output = controller.handle_input(user_input)
+                print_output(output)
+                continue
+
+            print(color_text(f"Warning: Low confidence match '{template}', score: {score:.2f}", COLOR_WARNING))
+            confirm = input(color_text(f"Run mapped command '{command}' anyway? (y/N): ", COLOR_WARNING)).strip().lower()
+            if confirm != 'y':
+                print(color_text("Command cancelled by user.", COLOR_CANCEL))
+                continue
+
         # Preview and ask confirmation for risky commands
         cmd_mapped = controller.mapper.map_phrase(user_input)
         if controller.safety.needs_warning(cmd_mapped):
@@ -87,6 +117,7 @@ def main():
                 print(color_text("Command cancelled.", COLOR_CANCEL))
                 continue
 
+        # Run input via controller.handle_input (which calls semantic matcher internally)
         output = controller.handle_input(user_input)
         print_output(output)
 
