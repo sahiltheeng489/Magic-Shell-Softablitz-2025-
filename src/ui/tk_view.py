@@ -5,6 +5,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.messagebox as messagebox
 from src.core.controller import Controller
+from src.ai.ollama_client import ollama_chat  # Real Ollama AI client
 
 def load_settings():
     settings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'settings.json'))
@@ -62,11 +63,20 @@ def run_command():
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
 
-    # /ai prefix support (simulated)
+    # /ai prefix support - calls real Ollama server
     if user_command.strip().startswith("/ai"):
         prompt = user_command.strip()[3:].strip()
-        insert_output(f"AI: (simulated) Response for prompt: '{prompt}'\n", tag="info")
-        run_button.config(state='normal')
+        if not prompt:
+            insert_output("Usage: /ai <your question>\n", tag="info")
+            run_button.config(state='normal')
+            return
+        insert_output(f"AI thinking...\n", tag="info")
+        def ai_task():
+            response = ollama_chat(prompt)
+            window.after(0, lambda: insert_output(f"AI: {response}\n", tag="info"))
+            window.after(0, lambda: run_button.config(state='normal'))
+        import threading
+        threading.Thread(target=ai_task, daemon=True).start()
         return
 
     # Help command
