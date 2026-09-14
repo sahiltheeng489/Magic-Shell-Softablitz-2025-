@@ -80,10 +80,20 @@ def main():
         # Handle help command
         if user_input.lower() == "help":
             print(color_text(
-                "Magic Shell Help:\n"
-                "- Standard shell and natural language commands supported\n"
-                "- Use '/ai <question>' for AI assistance\n"
-                "- Use 'exit' or 'quit' to leave\n",
+                "Magic Shell Help\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "Shell & natural language commands supported.\n\n"
+                "Alias commands:\n"
+                "  alias name=command   Create a shortcut (e.g. alias gs=git status)\n"
+                "  alias name           Show what an alias maps to\n"
+                "  alias list           Show all aliases\n"
+                "  unalias name         Remove an alias\n\n"
+                "Special commands:\n"
+                "  /ai <question>       Ask the AI assistant\n"
+                "  history              Show command history\n"
+                "  clear / cls          Clear screen\n"
+                "  exit / quit          Exit Magic Shell\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 COLOR_INFO))
             continue
 
@@ -117,9 +127,10 @@ def main():
                 print(color_text("Command cancelled.", COLOR_CANCEL))
                 continue
 
-        # Run input via controller.handle_input (which calls semantic matcher internally)
+        # Run input via controller.handle_input (handles alias/unalias internally)
         output = controller.handle_input(user_input)
-        print_output(output)
+        if output:
+            print_output(output)
 
 if __name__ == "__main__":
     main()

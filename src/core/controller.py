@@ -90,6 +90,59 @@ class Controller:
                     self.on_output(user_text, result)
                 return result
 
+        # --- Runtime alias management commands ---
+        # alias list
+        if lower in ["alias list", "alias ls", "list aliases", "show aliases"]:
+            all_aliases = self.alias_store.list_all()
+            if not all_aliases:
+                result = "No aliases defined.\n"
+            else:
+                lines = ["Aliases:"]
+                for name, cmd in sorted(all_aliases.items()):
+                    lines.append(f"  {name:<25} -> {cmd}")
+                result = "\n".join(lines) + "\n"
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
+
+        # alias name=command
+        if args[0].lower() == "alias" and len(args) >= 2:
+            raw = user_text_stripped[5:].strip()   # everything after "alias "
+            if "=" in raw:
+                name, _, cmd = raw.partition("=")
+                name = name.strip()
+                cmd = cmd.strip()
+                if not name or not cmd:
+                    result = "Usage: alias <name>=<command>\n"
+                else:
+                    self.alias_store.add(name, cmd)
+                    result = f"Alias saved: '{name}' -> '{cmd}'\n"
+
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
+            else:
+                # alias <name> without = — show what it maps to
+                name = raw.strip()
+                resolved = self.alias_store.resolve(name)
+                if resolved != name:
+                    result = f"alias {name}='{resolved}'\n"
+
+                else:
+                    result = f"No alias found for '{name}'\n"
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
+
+        # unalias name
+        if args[0].lower() == "unalias" and len(args) == 2:
+            name = args[1].strip()
+            removed = self.alias_store.remove(name)
+            result = f"Alias '{name}' removed.\n" if removed else f"No alias named '{name}'.\n"
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
+
         # --- Bug 6 fix: resolve user-defined aliases before NLP mapping ---
         resolved_by_alias = self.alias_store.resolve(user_text_stripped)
         if resolved_by_alias != user_text_stripped:
