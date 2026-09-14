@@ -9,7 +9,21 @@
   "current directory": "pwd",
   "go up": "cd ..",
   "change directory to": "cd",
-  "delete file": "rm",
   "remove directory": "rmdir",
-  "clear screen" : "cls"
+  "rename": "rename",
+  "change name": "rename",
+  "delete file": "rm",
+  "remove file": "rm",
+  "move and rename": "rename",
+  "rename file": "rename",
+  "rename folder": "rename",
+  "clear": "cls",
+  "clear screen": "cls",
+  "show file": "cat",
+  "display file": "cat",
+  "read file": "cat",
+  "touch": "touch",
+  "create file": "touch",
+  "new file": "touch",
+  "make file": "touch"
 }

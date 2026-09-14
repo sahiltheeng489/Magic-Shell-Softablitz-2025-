@@ -134,9 +134,9 @@ class Controller:
                     self.on_output(user_text, result)
                 return result
 
-        # unalias name
-        if args[0].lower() == "unalias" and len(args) == 2:
-            name = args[1].strip()
+        # unalias name  (supports multi-word names e.g. "unalias clear screen")
+        if args[0].lower() == "unalias" and len(args) >= 2:
+            name = user_text_stripped[7:].strip()   # everything after "unalias "
             removed = self.alias_store.remove(name)
             result = f"Alias '{name}' removed.\n" if removed else f"No alias named '{name}'.\n"
             if self.on_output:
