@@ -47,6 +47,13 @@ class Controller:
                 self.on_output(user_text, output)
             return output
 
+        # --- Help command ---
+        if lower == "help":
+            result = self._build_help()
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
+
         # --- Built-in commands handled directly ---
         if args[0].lower() == "rename":
             if len(args) != 3:
@@ -185,6 +192,66 @@ class Controller:
             self.handle_input(user_text)
         t = threading.Thread(target=task, daemon=True)
         t.start()
+
+    def _build_help(self) -> str:
+        """Build a rich, formatted help string showing all commands and NLP phrases."""
+        SEP = "-" * 52
+
+        lines = [
+            "",
+            "  Magic Shell - Help",
+            SEP,
+            "",
+            "  NATURAL LANGUAGE PHRASES",
+            "  (just type these in plain English)",
+            "",
+        ]
+
+        # Group NLP phrases from aliases.json by their mapped command
+        groups = {}
+        for phrase, cmd in sorted(self.alias_store.list_all().items()):
+            groups.setdefault(cmd, []).append(phrase)
+
+        for cmd, phrases in sorted(groups.items()):
+            phrase_str = " / ".join(phrases)
+            lines.append(f"  {phrase_str:<38} -> {cmd}")
+
+        lines += [
+            "",
+            SEP,
+            "  FILE & FOLDER COMMANDS",
+            "",
+            "  mkdir <name>                           Create a folder",
+            "  touch <name>                           Create a file",
+            "  cat <file>                             Show file contents",
+            "  rename <old> <new>                     Rename file or folder",
+            "  rm / del <file>                        Delete a file",
+            "  rmdir <folder>                         Delete a folder",
+            "  cd <path>                              Change directory",
+            "  cd ..                                  Go up one level",
+            "",
+            SEP,
+            "  ALIAS COMMANDS",
+            "",
+            "  alias <name>=<command>                 Create a shortcut",
+            "  alias <name>                           Look up an alias",
+            "  alias list                             Show all aliases",
+            "  unalias <name>                         Remove an alias",
+            "",
+            SEP,
+            "  SPECIAL COMMANDS",
+            "",
+            "  /ai <question>                         Ask the AI assistant",
+            "  history                                Show command history",
+            "  clear / cls                            Clear the screen",
+            "  help                                   Show this help",
+            "  exit / quit                            Exit Magic Shell",
+            "",
+            SEP,
+            "",
+        ]
+
+        return "\n".join(lines)
 
     def get_cwd(self) -> str:
         return self.runner.get_cwd()

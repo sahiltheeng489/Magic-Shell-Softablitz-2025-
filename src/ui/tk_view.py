@@ -79,14 +79,10 @@ def run_command():
         threading.Thread(target=ai_task, daemon=True).start()
         return
 
-    # Help command
+    # Help command — route through controller so GUI and CLI show the same output
     if user_command.strip().lower() == "help":
-        insert_output(
-            "Magic Shell Help:\n"
-            "- Standard shell and natural language commands supported\n"
-            "- Use '/ai <question>' for AI assistance\n"
-            "- Use 'exit' to leave GUI\n",
-            tag="info")
+        help_text = controller._build_help()
+        insert_output(help_text + "\n", tag="info")
         run_button.config(state='normal')
         return
 
