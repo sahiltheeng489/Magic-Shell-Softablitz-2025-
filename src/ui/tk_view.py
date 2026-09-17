@@ -127,6 +127,104 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
+# --- Tab Autocomplete ---
+_tab_matches = []
+_tab_index = -1
+_tab_prefix = ""
+
+BUILTIN_COMMANDS = [
+    "alias", "unalias", "alias list", "history", "help",
+    "clear", "cls", "exit", "quit",
+    "mkdir", "touch", "cat", "rename", "rm", "del",
+    "rmdir", "cd", "dir", "pwd", "/ai",
+]
+
+def _get_completions(prefix):
+    """Return all completions for the given prefix."""
+    prefix_lower = prefix.lower()
+    matches = []
+
+    # 1. Alias names from aliases.json
+    for name in sorted(controller.alias_store.list_all().keys()):
+        if name.lower().startswith(prefix_lower):
+            matches.append(name)
+
+    # 2. Built-in commands
+    for cmd in BUILTIN_COMMANDS:
+        if cmd.lower().startswith(prefix_lower) and cmd not in matches:
+            matches.append(cmd)
+
+    # 3. Files and folders in current directory
+    try:
+        cwd = controller.get_cwd()
+        # If prefix has a path component, complete inside that dir
+        dir_part = os.path.dirname(prefix) if os.sep in prefix or "/" in prefix else ""
+        base_part = os.path.basename(prefix) if prefix else prefix
+        search_dir = os.path.join(cwd, dir_part) if dir_part else cwd
+        for name in sorted(os.listdir(search_dir)):
+            candidate = os.path.join(dir_part, name) if dir_part else name
+            if candidate.lower().startswith(prefix_lower) and candidate not in matches:
+                # Append trailing slash for directories
+                if os.path.isdir(os.path.join(search_dir, name)):
+                    candidate += os.sep
+                matches.append(candidate)
+    except Exception:
+        pass
+
+    return matches
+
+def on_tab(event):
+    global _tab_matches, _tab_index, _tab_prefix
+    current = entry.get()
+
+    # If this is a fresh Tab press (not cycling), build the completion list
+    if not _tab_matches or current != (_tab_matches[_tab_index] if _tab_matches else ""):
+        _tab_prefix = current
+        _tab_matches = _get_completions(current)
+        _tab_index = -1
+
+    if not _tab_matches:
+        return "break"  # Nothing to complete
+
+    # Cycle forward
+    _tab_index = (_tab_index + 1) % len(_tab_matches)
+    entry.delete(0, tk.END)
+    entry.insert(0, _tab_matches[_tab_index])
+
+    # Show hint in output if multiple matches
+    if len(_tab_matches) > 1:
+        hint = "  ".join(_tab_matches)
+        insert_output(f"[Tab] {hint}\n", tag="info")
+
+    return "break"  # Prevent default Tab behaviour (focus change)
+
+def on_shift_tab(event):
+    global _tab_matches, _tab_index, _tab_prefix
+    current = entry.get()
+
+    if not _tab_matches or current != (_tab_matches[_tab_index] if _tab_matches else ""):
+        _tab_prefix = current
+        _tab_matches = _get_completions(current)
+        _tab_index = len(_tab_matches)
+
+    if not _tab_matches:
+        return "break"
+
+    # Cycle backward
+    _tab_index = (_tab_index - 1) % len(_tab_matches)
+    entry.delete(0, tk.END)
+    entry.insert(0, _tab_matches[_tab_index])
+    return "break"
+
+def reset_tab_state(event=None):
+    """Reset tab state whenever user types a printable character (not Tab/arrows)."""
+    global _tab_matches, _tab_index, _tab_prefix
+    if event and event.keysym in ("Tab", "ISO_Left_Tab", "Up", "Down", "Shift_L", "Shift_R"):
+        return
+    _tab_matches = []
+    _tab_index = -1
+    _tab_prefix = ""
+
 def insert_output(text, tag="normal"):
     output_area.config(state='normal')
     output_area.insert(tk.END, text, tag)
@@ -142,6 +240,10 @@ entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
 entry.bind("<Up>", on_up)
 entry.bind("<Down>", on_down)
+entry.bind("<Tab>", on_tab)
+entry.bind("<Shift-Tab>", on_shift_tab)
+entry.bind("<Key>", reset_tab_state)
+entry.bind("<Return>", lambda e: run_command())
 
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
