@@ -26,4 +26,6 @@ class Safety:
 
     def needs_warning(self, cmd: str) -> bool:
         c = cmd.strip().lower()
+        if c == "pwd":
+            return False
         return any(re.search(p, c) for p in self.warn_patterns)
