@@ -150,18 +150,21 @@ class Controller:
                 self.on_output(user_text, result)
             return result
 
-        # --- Bug 6 fix: resolve user-defined aliases before NLP mapping ---
+        # --- NLP resolution: exact alias → PhraseMapper → SemanticMatcher ---
         resolved_by_alias = self.alias_store.resolve(user_text_stripped)
         if resolved_by_alias != user_text_stripped:
-            # User has an exact alias for this input — use it directly
+            # Exact alias match — use it directly
             resolved_command = resolved_by_alias
         else:
-            # Fall through to semantic/regex NLP mapping
-            template, command, score = self.matcher.match(user_text_stripped)
-            if score >= SIMILARITY_THRESHOLD:
-                resolved_command = command
+            # Try regex PhraseMapper first (deterministic, precise patterns)
+            mapped = self.mapper.map_phrase(user_text_stripped)
+            if mapped != user_text_stripped:
+                # PhraseMapper matched something — trust it
+                resolved_command = mapped
             else:
-                resolved_command = self.mapper.map_phrase(user_text_stripped)
+                # PhraseMapper had no match — fall back to SemanticMatcher
+                template, command, score = self.matcher.match(user_text_stripped)
+                resolved_command = command if score >= SIMILARITY_THRESHOLD else user_text_stripped
 
         # --- Bug 7 fix: enforce hard-block on truly dangerous commands ---
         if self.safety.is_blocked(resolved_command):
