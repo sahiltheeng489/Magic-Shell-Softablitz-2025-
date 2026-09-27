@@ -1,56 +1,224 @@
-Magic Shell - Softablitz 2025
+# Magic Shell 🐚✨
 
-This repository contains the Magic Shell application developed for Softablitz 2025 hackathon.
-Description
+> **Softablitz 2025 Hackathon Project**
 
-Magic Shell is a natural language command interpreter that converts human-friendly instructions into shell commands using AI/NLP techniques. It includes both a GUI and CLI version.
+A natural language-powered terminal shell for students and beginners — type what you want in plain English and Magic Shell figures out the command.
 
-Contents
+---
 
-   * dist/ - https://drive.google.com/drive/folders/16iFxgn_U2WyevcjM_wtNQWWaaf2jVnzs?usp=drive_link
+## 🚀 The Problem
 
-   * docs - ...
+Traditional terminals demand exact commands, flags, and syntax. For students and beginners this means:
+- Steep learning curve just to do basic tasks
+- Constant context-switching to browser searches
+- Frustration when errors say nothing useful
 
-How to Use
+## 💡 The Solution
 
-Running the GUI
+Magic Shell lets you type in plain English:
 
-    Extract the ZIP file.
+| You type | Magic Shell runs |
+|---|---|
+| `show me the files` | `dir` |
+| `create a new folder called src` | `mkdir src` |
+| `where am i` | `cd` (shows current path) |
+| `go up` | `cd ..` |
+| `show the contents of readme.txt` | `cat readme.txt` |
+| `/ai how do I copy a file?` | AI assistant answers |
+| `alias gs=git status` | Creates `gs` shortcut |
 
-    Navigate to dist folder.
+---
 
-    Run main.exe (on Windows).
+## ✨ Features
 
-Running the CLI
+- **Natural Language Commands** — type plain English, get the right shell command
+- **AI Assistant** — `/ai <question>` powered by Ollama (tinyllama model, runs locally)
+- **Runtime Alias System** — create, list, and remove custom shortcuts at runtime
+- **Tab Autocomplete** — completes alias names, built-in commands, and file/folder names
+- **Command History** — scroll with ↑/↓ arrows, view with `history`
+- **Safety Layer** — dangerous commands (e.g. `rm -rf /`) are hard-blocked; risky ones require confirmation
+- **Live CWD Label** — GUI always shows the current working directory
+- **Rich `help` Command** — shows all supported NLP phrases, file commands, alias commands
+- **Dual Interface** — both a Tkinter GUI (`src/main.py`) and a CLI (`cli_shell.py`)
+- **Persistent Aliases** — aliases saved to `aliases.json`, survive app restarts
+- **Customisable** — font, colors, and default working directory via `settings.json`
 
-    Extract the ZIP file.
+---
 
-    Go to the dist folder.
+## 🏗️ Folder Structure
 
-    Run main_cli.exe via terminal.
+```
+Magic-Shell-Softablitz-2025-/
+│
+├── src/                        # Main application source
+│   ├── main.py                 # Entry point — launches the Tkinter GUI
+│   ├── history_manager.py      # Utility: add/get command history
+│   │
+│   ├── ai/                     # AI integration
+│   │   ├── ollama_client.py    # Calls local Ollama server (tinyllama)
+│   │   └── langchain_llama.py  # LangChain integration (future)
+│   │
+│   ├── core/                   # Application brain
+│   │   ├── controller.py       # Central controller — routes input to commands
+│   │   ├── runner.py           # Executes shell commands via subprocess
+│   │   ├── safety.py           # Hard-blocks and warnings for dangerous commands
+│   │   └── commands.py         # Built-in commands (rename, touch, cat, rm, rmdir)
+│   │
+│   ├── nlp/                    # Natural language processing
+│   │   ├── mapper.py           # Regex-based phrase → command mapper
+│   │   └── semantic_matcher.py # Semantic similarity via sentence-transformers
+│   │
+│   ├── store/                  # Persistent storage
+│   │   ├── alias.py            # AliasStore — load/save/resolve/add/remove aliases
+│   │   └── history.py          # HistoryStore — session history
+│   │
+│   └── ui/
+│       └── tk_view.py          # Tkinter GUI — input, output, buttons, tab-complete
+│
+├── cli_shell.py                # Standalone CLI shell (no GUI required)
+├── aliases.json                # Persistent alias dictionary
+├── history.json                # Saved command history
+├── settings.json               # App configuration (colors, font, default CWD)
+├── README.md
+└── ROADMAP.md
+```
 
-Ollama Server Integration
+---
 
-Magic Shell leverages the Ollama server to run AI models locally, providing powerful natural language processing capabilities.
-What you need to know
+## 🛠️ Tech Stack
 
-    Ollama Server: The system requires an Ollama server instance running locally or accessible remotely to serve the AI models.
+| Layer | Technology |
+|---|---|
+| **Language** | Python 3.10+ |
+| **GUI** | Tkinter (built-in) |
+| **NLP — Regex** | Python `re` module |
+| **NLP — Semantic** | `sentence-transformers` (all-MiniLM-L6-v2) |
+| **AI Assistant** | Ollama (local LLM server) + tinyllama model |
+| **Persistence** | JSON files (`aliases.json`, `history.json`) |
+| **Shell Execution** | `subprocess` module |
+| **Version Control** | Git / GitHub |
 
-    Model Setup: Before running Magic Shell, ensure you have pulled the necessary AI model(tinyllama) using Ollama tooling.
+---
 
+## ⚙️ Setup & Installation
 
+### Prerequisites
+- Python 3.10 or higher
+- [Ollama](https://ollama.com/download) (for `/ai` command)
 
-Starting Ollama Server: Run the Ollama server on your machine:
+### Install Python dependencies
 
-    text
-    ollama serve
+```bash
+pip install sentence-transformers
+```
 
-    or provide the server address in your app configuration environment variable OLLAMA_HOST.
+### Clone the repo
 
-    Configuration: You can customize Ollama server URL and access tokens in your app’s settings to connect to the appropriate endpoint.
+```bash
+git clone https://github.com/sahiltheeng489/Magic-Shell-Softablitz-2025-.git
+cd Magic-Shell-Softablitz-2025-
+```
 
-Benefits
+### (One-time) Download the AI model
 
-    Running Ollama locally keeps all AI processing private and does not send data to external cloud services.
+```bash
+ollama pull tinyllama
+```
 
-    Allows for faster, reliable, and customizable AI model interaction within Magic Shell
+### Run the GUI
+
+```bash
+python src/main.py
+```
+
+### Run the CLI
+
+```bash
+python cli_shell.py
+```
+
+---
+
+## 🧪 Usage Examples
+
+### Natural Language
+```
+list all files
+create a new folder called myproject
+go up
+navigate to C:\Users
+show the contents of settings.json
+delete file old_notes.txt
+can you remove the folder temp
+copy file a.txt to b.txt
+clear the screen
+where am i
+```
+
+### Alias System
+```
+alias gs=git status     # create shortcut
+gs                      # runs: git status
+alias list              # show all aliases
+alias gs                # look up what gs maps to
+unalias gs              # remove alias
+unalias clear screen    # multi-word alias names supported
+```
+
+### AI Assistant
+```
+/ai how do I list all files recursively?
+/ai what does the cd command do?
+/ai explain the difference between rmdir and del
+```
+
+### Help
+```
+help
+```
+
+---
+
+## ⚙️ Configuration (`settings.json`)
+
+```json
+{
+  "color_normal": "lime",
+  "color_error": "red",
+  "color_warning": "orange",
+  "color_info": "cyan",
+  "color_cancel": "yellow",
+  "default_cwd": "",
+  "font_family": "Consolas",
+  "font_size": 10
+}
+```
+
+Set `default_cwd` to a path (e.g. `"C:\\Projects"`) to open the shell in that folder automatically.
+
+---
+
+## 🔒 Safety System
+
+| Level | Examples | Behaviour |
+|---|---|---|
+| 🔴 Hard Blocked | `rm -rf /`, `format c:`, `shutdown` | Rejected — cannot run at all |
+| 🟡 Warning | `del /s`, `move`, risky deletions | Confirmation dialog before running |
+| 🟢 Safe | `dir`, `mkdir`, `cd`, `echo` | Runs immediately |
+
+---
+
+## 🗺️ Keyboard Shortcuts (GUI)
+
+| Key | Action |
+|---|---|
+| `Enter` | Run command |
+| `↑` / `↓` | Scroll through command history |
+| `Tab` | Autocomplete (cycles through aliases, commands, files) |
+| `Shift+Tab` | Autocomplete — cycle backward |
+
+---
+
+## 👥 Team
+
+Built for **Softablitz 2025** Hackathon.

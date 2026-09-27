@@ -1,6 +1,13 @@
-from sentence_transformers import SentenceTransformer
+import os
 import numpy as np
 import json
+
+# Force offline mode — use the locally cached model without any network calls.
+# This avoids 30s+ of retry delays when HuggingFace is unreachable.
+os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
+os.environ.setdefault('HF_HUB_OFFLINE', '1')
+
+from sentence_transformers import SentenceTransformer
 
 class SemanticMatcher:
     def __init__(self, alias_json_path):

@@ -4,41 +4,8 @@ import json
 import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.messagebox as messagebox
-from functools import partial
 from src.core.controller import Controller
-from src.ai.ollama_client import ollama_chat  # Import Ollama client
-
-HISTORY_FILE = "history.json"
-cmd_history = []
-history_index = -1
-
-def load_history():
-    global cmd_history
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                cmd_history = json.load(f)
-        except Exception:
-            cmd_history = []
-    else:
-        cmd_history = []
-
-def save_history():
-    try:
-        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(cmd_history, f, indent=2)
-    except Exception as e:
-        insert_output(f"[Error saving history: {e}]\n", tag="error")
-
-def add_to_history(cmd):
-    global cmd_history
-    if cmd and (len(cmd_history) == 0 or cmd_history[-1] != cmd):
-        cmd_history.append(cmd)
-        save_history()
-
-def get_history_output():
-    return "\n".join(f"{i+1}: {cmd}" for i, cmd in enumerate(cmd_history))
-
+from src.ai.ollama_client import ollama_chat  # Real Ollama AI client
 
 def load_settings():
     settings_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'settings.json'))
@@ -68,8 +35,6 @@ if config.get("default_cwd"):
     except Exception:
         pass
 
-
-
 def on_controller_output(user_cmd, output):
     if "Blocked by safety" in output or "Error:" in output or "not found" in output:
         tag = "error"
@@ -86,52 +51,40 @@ def on_cwd_changed(new_cwd):
 
 controller = Controller(on_output=on_controller_output, on_cwd_changed=on_cwd_changed)
 
-def run_command(event=None):
+cmd_history = []
+history_index = -1
+
+def run_command():
     global history_index
-    user_command = entry.get().strip()
-    if not user_command:
-        return
-
-    if user_command == "history":
-        output = get_history_output()
-        insert_output(output + "\n", tag="info")
-        entry.delete(0, tk.END)
-        return
-
-    add_to_history(user_command)
+    user_command = entry.get()
+    if user_command.strip():
+        cmd_history.append(user_command)
     history_index = len(cmd_history)
     entry.delete(0, tk.END)
     run_button.config(state='disabled')
 
-    # /ai prefix support (real with Ollama)
-    if user_command.startswith("/ai"):
-        prompt = user_command[3:].strip()
-        ai_response = ollama_chat(prompt)
-        insert_output(f"AI: {ai_response}\n", tag="info")
-        run_button.config(state='normal')
-        return
-
-    # Help command
-    if user_command.lower() == "help":
-        insert_output(
-            "Magic Shell Help:\n"
-            "- Standard shell and natural language commands supported\n"
-            "- Use '/ai <question>' for AI assistance\n"
-            "- Use 'exit' to leave GUI\n",
-            tag="info")
-        run_button.config(state='normal')
-        return
-
-    # Semantic confidence check
-    template, mapped_command, score = controller.matcher.match(user_command)
-    if 0.4 <= score < 0.6:
-        confirm = messagebox.askyesno(
-            "Low Confidence Match",
-            f"The closest match is '{template}' with confidence {score:.2f}.\nRun mapped command '{mapped_command}' anyway?")
-        if not confirm:
-            insert_output("Command cancelled by user.\n", tag="cancel")
+    # /ai prefix support - calls real Ollama server
+    if user_command.strip().startswith("/ai"):
+        prompt = user_command.strip()[3:].strip()
+        if not prompt:
+            insert_output("Usage: /ai <your question>\n", tag="info")
             run_button.config(state='normal')
             return
+        insert_output(f"AI thinking...\n", tag="info")
+        def ai_task():
+            response = ollama_chat(prompt)
+            window.after(0, lambda: insert_output(f"AI: {response}\n", tag="info"))
+            window.after(0, lambda: run_button.config(state='normal'))
+        import threading
+        threading.Thread(target=ai_task, daemon=True).start()
+        return
+
+    # Help command — route through controller so GUI and CLI show the same output
+    if user_command.strip().lower() == "help":
+        help_text = controller._build_help()
+        insert_output(help_text + "\n", tag="info")
+        run_button.config(state='normal')
+        return
 
     # Preview and confirm harmful commands
     mapped_cmd = controller.mapper.map_phrase(user_command)
@@ -144,8 +97,8 @@ def run_command(event=None):
             run_button.config(state='normal')
             return
 
-    output = controller.handle_input(user_command)
-    run_button.config(state='normal')
+    controller.handle_input_async(user_command)
+    window.after(200, lambda: run_button.config(state='normal'))
 
 def cancel_command():
     controller.cancel()
@@ -174,22 +127,109 @@ def on_down(event):
         history_index = len(cmd_history)
         entry.delete(0, tk.END)
 
+# --- Tab Autocomplete ---
+_tab_matches = []
+_tab_index = -1
+_tab_prefix = ""
+
+BUILTIN_COMMANDS = [
+    "alias", "unalias", "alias list", "history", "help",
+    "clear", "cls", "exit", "quit",
+    "mkdir", "touch", "cat", "rename", "rm", "del",
+    "rmdir", "cd", "dir", "pwd", "/ai",
+]
+
+def _get_completions(prefix):
+    """Return all completions for the given prefix."""
+    prefix_lower = prefix.lower()
+    matches = []
+
+    # 1. Alias names from aliases.json
+    for name in sorted(controller.alias_store.list_all().keys()):
+        if name.lower().startswith(prefix_lower):
+            matches.append(name)
+
+    # 2. Built-in commands
+    for cmd in BUILTIN_COMMANDS:
+        if cmd.lower().startswith(prefix_lower) and cmd not in matches:
+            matches.append(cmd)
+
+    # 3. Files and folders in current directory
+    try:
+        cwd = controller.get_cwd()
+        # If prefix has a path component, complete inside that dir
+        dir_part = os.path.dirname(prefix) if os.sep in prefix or "/" in prefix else ""
+        base_part = os.path.basename(prefix) if prefix else prefix
+        search_dir = os.path.join(cwd, dir_part) if dir_part else cwd
+        for name in sorted(os.listdir(search_dir)):
+            candidate = os.path.join(dir_part, name) if dir_part else name
+            if candidate.lower().startswith(prefix_lower) and candidate not in matches:
+                # Append trailing slash for directories
+                if os.path.isdir(os.path.join(search_dir, name)):
+                    candidate += os.sep
+                matches.append(candidate)
+    except Exception:
+        pass
+
+    return matches
+
+def on_tab(event):
+    global _tab_matches, _tab_index, _tab_prefix
+    current = entry.get()
+
+    # If this is a fresh Tab press (not cycling), build the completion list
+    if not _tab_matches or current != (_tab_matches[_tab_index] if _tab_matches else ""):
+        _tab_prefix = current
+        _tab_matches = _get_completions(current)
+        _tab_index = -1
+
+    if not _tab_matches:
+        return "break"  # Nothing to complete
+
+    # Cycle forward
+    _tab_index = (_tab_index + 1) % len(_tab_matches)
+    entry.delete(0, tk.END)
+    entry.insert(0, _tab_matches[_tab_index])
+
+    # Show hint in output if multiple matches
+    if len(_tab_matches) > 1:
+        hint = "  ".join(_tab_matches)
+        insert_output(f"[Tab] {hint}\n", tag="info")
+
+    return "break"  # Prevent default Tab behaviour (focus change)
+
+def on_shift_tab(event):
+    global _tab_matches, _tab_index, _tab_prefix
+    current = entry.get()
+
+    if not _tab_matches or current != (_tab_matches[_tab_index] if _tab_matches else ""):
+        _tab_prefix = current
+        _tab_matches = _get_completions(current)
+        _tab_index = len(_tab_matches)
+
+    if not _tab_matches:
+        return "break"
+
+    # Cycle backward
+    _tab_index = (_tab_index - 1) % len(_tab_matches)
+    entry.delete(0, tk.END)
+    entry.insert(0, _tab_matches[_tab_index])
+    return "break"
+
+def reset_tab_state(event=None):
+    """Reset tab state whenever user types a printable character (not Tab/arrows)."""
+    global _tab_matches, _tab_index, _tab_prefix
+    if event and event.keysym in ("Tab", "ISO_Left_Tab", "Up", "Down", "Shift_L", "Shift_R"):
+        return
+    _tab_matches = []
+    _tab_index = -1
+    _tab_prefix = ""
+
 def insert_output(text, tag="normal"):
     output_area.config(state='normal')
     output_area.insert(tk.END, text, tag)
     output_area.config(state='disabled')
     output_area.see(tk.END)
-
-def autocomplete(event):
-    current_text = entry.get()
-    if not current_text:
-        return "break"
-    matches = [cmd for cmd in cmd_history if cmd.startswith(current_text)]
-    if matches:
-        entry.delete(0, tk.END)
-        entry.insert(0, matches[0])
-        entry.icursor(tk.END)  # Move cursor to end
-    return "break"
 
 window = tk.Tk()
 window.title("Magic Shell UI")
@@ -200,8 +240,10 @@ entry = tk.Entry(window, width=80, font=terminal_font)
 entry.pack(pady=5)
 entry.bind("<Up>", on_up)
 entry.bind("<Down>", on_down)
-entry.bind("<Return>", lambda event: run_command())
-entry.bind("<Tab>", autocomplete)
+entry.bind("<Tab>", on_tab)
+entry.bind("<Shift-Tab>", on_shift_tab)
+entry.bind("<Key>", reset_tab_state)
+entry.bind("<Return>", lambda e: run_command())
 
 run_button = tk.Button(window, text="Run", command=run_command)
 run_button.pack(pady=5)
@@ -231,8 +273,5 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 cwd_label = tk.Label(window, text=f"cwd: {controller.get_cwd()}", anchor="w")
 cwd_label.pack(fill="x")
-
-
-load_history()  # Load history at startup
 
 window.mainloop()

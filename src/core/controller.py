@@ -1,13 +1,9 @@
 from src.nlp.mapper import PhraseMapper
 from src.nlp.semantic_matcher import SemanticMatcher
-from src.core.runner import CommandRunner  # Import the correct runner class
+from src.core.runner import CommandRunner
 from src.core.safety import Safety
-from src.history_manager import add_to_history  # Import for history management
-from src.core.commands import rename_item
-from src.core.commands import clear_terminal
-from src.core.commands import show_file_content
-from src.core.commands import touch_file
-from src.core.commands import remove_file, remove_folder
+from src.core.commands import rename_item, clear_terminal, show_file_content, touch_file, remove_file, remove_folder
+from src.store.alias import AliasStore  # Bug 6 fix: wire AliasStore so it's actually used
 
 
 SIMILARITY_THRESHOLD = 0.6
@@ -21,73 +17,244 @@ class Controller:
         self.safety = Safety()
         self.on_output = on_output
         self.on_cwd_changed = on_cwd_changed
+        self.alias_store = AliasStore()  # Bug 6 fix: instantiate and use AliasStore
 
-        # Initialize the semantic matcher with the path to aliases.json
+        # Semantic matcher backed by aliases.json
         self.matcher = SemanticMatcher("aliases.json")
 
+    # ------------------------------------------------------------------
+    # Bug 3 fix: add cancel() so the GUI's cancel_command() doesn't crash
+    # ------------------------------------------------------------------
+    def cancel(self):
+        """Proxy cancel signal to the underlying CommandRunner."""
+        self.runner.cancel()
+
     def handle_input(self, user_text):
-        user_text_stripped = user_text.strip().lower()
-        # Special-case skip warning for 'pwd'
-        if user_text_stripped == "pwd":
-            resolved_command = "pwd"
-            output = self.runner.run(resolved_command)
+        user_text_stripped = user_text.strip()
+
+        # Bug 5 fix: history is added by the UI layer — do NOT add it here again
+
+        args = user_text_stripped.split()
+        if len(args) == 0:
+            return "No command entered."
+
+        lower = user_text_stripped.lower()
+
+        # Special-case: pwd never needs safety warning
+        if lower == "pwd":
+            output = self.runner.run("pwd")
             if self.on_output:
                 self.on_output(user_text, output)
             return output
 
-        # Add to command history
-        add_to_history(user_text)
-        args = user_text.strip().split()
+        # --- Help command ---
+        if lower == "help":
+            result = self._build_help()
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
-        if len(args) == 0:
-            return "No command entered."
-
-        if args[0] == "rename":
+        # --- Built-in commands handled directly ---
+        if args[0].lower() == "rename":
             if len(args) != 3:
                 return "Usage: rename <old_name> <new_name>"
-            return rename_item(args[1], args[2])
+            result = rename_item(args[1], args[2])
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
-        if len(args) == 1 and args[0].lower() == "clear":
-            return clear_terminal()
+        if len(args) == 1 and lower == "clear":
+            result = clear_terminal()
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
-        if len(args) == 2 and args[0].lower() == "cat":
-            return show_file_content(args[1])
+        if len(args) == 2 and lower.startswith("cat "):
+            result = show_file_content(args[1])
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
-        if len(args) == 2 and args[0].lower() == "touch":
-            return touch_file(args[1])
+        if len(args) == 2 and lower.startswith("touch "):
+            result = touch_file(args[1])
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
         if len(args) == 2:
             cmd = args[0].lower()
             target = args[1]
 
             if cmd in ["rm", "delete", "del", "removefile", "remove file"]:
-                return remove_file(target)
+                result = remove_file(target)
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
 
-            if cmd in [
-                "rmdir",
-                "removedir",
-                "remove directory",
-                "removefolder",
-                "remove folder",
-            ]:
-                return remove_folder(target)
+            if cmd in ["rmdir", "removedir", "remove directory", "removefolder", "remove folder"]:
+                result = remove_folder(target)
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
 
-        template, command, score = self.matcher.match(user_text)
+        # --- Runtime alias management commands ---
+        # alias list
+        if lower in ["alias list", "alias ls", "list aliases", "show aliases"]:
+            all_aliases = self.alias_store.list_all()
+            if not all_aliases:
+                result = "No aliases defined.\n"
+            else:
+                lines = ["Aliases:"]
+                for name, cmd in sorted(all_aliases.items()):
+                    lines.append(f"  {name:<25} -> {cmd}")
+                result = "\n".join(lines) + "\n"
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
 
-        if score >= SIMILARITY_THRESHOLD:
-            resolved_command = command
-        elif WARN_THRESHOLD <= score < SIMILARITY_THRESHOLD:
-            resolved_command = self.mapper.map_phrase(user_text)
+        # alias name=command
+        if args[0].lower() == "alias" and len(args) >= 2:
+            raw = user_text_stripped[5:].strip()   # everything after "alias "
+            if "=" in raw:
+                name, _, cmd = raw.partition("=")
+                name = name.strip()
+                cmd = cmd.strip()
+                if not name or not cmd:
+                    result = "Usage: alias <name>=<command>\n"
+                else:
+                    self.alias_store.add(name, cmd)
+                    result = f"Alias saved: '{name}' -> '{cmd}'\n"
+
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
+            else:
+                # alias <name> without = — show what it maps to
+                name = raw.strip()
+                resolved = self.alias_store.resolve(name)
+                if resolved != name:
+                    result = f"alias {name}='{resolved}'\n"
+
+                else:
+                    result = f"No alias found for '{name}'\n"
+                if self.on_output:
+                    self.on_output(user_text, result)
+                return result
+
+        # unalias name  (supports multi-word names e.g. "unalias clear screen")
+        if args[0].lower() == "unalias" and len(args) >= 2:
+            name = user_text_stripped[7:].strip()   # everything after "unalias "
+            removed = self.alias_store.remove(name)
+            result = f"Alias '{name}' removed.\n" if removed else f"No alias named '{name}'.\n"
+            if self.on_output:
+                self.on_output(user_text, result)
+            return result
+
+        # --- NLP resolution: exact alias → PhraseMapper → SemanticMatcher ---
+        resolved_by_alias = self.alias_store.resolve(user_text_stripped)
+        if resolved_by_alias != user_text_stripped:
+            # Exact alias match — use it directly
+            resolved_command = resolved_by_alias
         else:
-            resolved_command = self.mapper.map_phrase(user_text)
+            # Try regex PhraseMapper first (deterministic, precise patterns)
+            mapped = self.mapper.map_phrase(user_text_stripped)
+            if mapped != user_text_stripped:
+                # PhraseMapper matched something — trust it
+                resolved_command = mapped
+            else:
+                # PhraseMapper had no match — fall back to SemanticMatcher
+                template, command, score = self.matcher.match(user_text_stripped)
+                resolved_command = command if score >= SIMILARITY_THRESHOLD else user_text_stripped
+
+        # --- Bug 7 fix: enforce hard-block on truly dangerous commands ---
+        if self.safety.is_blocked(resolved_command):
+            error_msg = f"Blocked by safety: '{resolved_command}' is a dangerous command and cannot be run."
+            if self.on_output:
+                self.on_output(user_text, error_msg)
+            return error_msg
+
+        # Save cwd before running so we can detect changes
+        cwd_before = self.runner.get_cwd()
 
         output = self.runner.run(resolved_command)
+
+        # Bug 4 fix: fire on_cwd_changed whenever the working directory changes
+        cwd_after = self.runner.get_cwd()
+        if cwd_after != cwd_before and self.on_cwd_changed:
+            self.on_cwd_changed(cwd_after)
 
         if self.on_output:
             self.on_output(user_text, output)
 
         return output
 
+    def handle_input_async(self, user_text: str):
+        """Run handle_input in a background thread so the GUI never freezes."""
+        import threading
+        def task():
+            self.handle_input(user_text)
+        t = threading.Thread(target=task, daemon=True)
+        t.start()
+
+    def _build_help(self) -> str:
+        """Build a rich, formatted help string showing all commands and NLP phrases."""
+        SEP = "-" * 52
+
+        lines = [
+            "",
+            "  Magic Shell - Help",
+            SEP,
+            "",
+            "  NATURAL LANGUAGE PHRASES",
+            "  (just type these in plain English)",
+            "",
+        ]
+
+        # Group NLP phrases from aliases.json by their mapped command
+        groups = {}
+        for phrase, cmd in sorted(self.alias_store.list_all().items()):
+            groups.setdefault(cmd, []).append(phrase)
+
+        for cmd, phrases in sorted(groups.items()):
+            phrase_str = " / ".join(phrases)
+            lines.append(f"  {phrase_str:<38} -> {cmd}")
+
+        lines += [
+            "",
+            SEP,
+            "  FILE & FOLDER COMMANDS",
+            "",
+            "  mkdir <name>                           Create a folder",
+            "  touch <name>                           Create a file",
+            "  cat <file>                             Show file contents",
+            "  rename <old> <new>                     Rename file or folder",
+            "  rm / del <file>                        Delete a file",
+            "  rmdir <folder>                         Delete a folder",
+            "  cd <path>                              Change directory",
+            "  cd ..                                  Go up one level",
+            "",
+            SEP,
+            "  ALIAS COMMANDS",
+            "",
+            "  alias <name>=<command>                 Create a shortcut",
+            "  alias <name>                           Look up an alias",
+            "  alias list                             Show all aliases",
+            "  unalias <name>                         Remove an alias",
+            "",
+            SEP,
+            "  SPECIAL COMMANDS",
+            "",
+            "  /ai <question>                         Ask the AI assistant",
+            "  history                                Show command history",
+            "  clear / cls                            Clear the screen",
+            "  help                                   Show this help",
+            "  exit / quit                            Exit Magic Shell",
+            "",
+            SEP,
+            "",
+        ]
+
+        return "\n".join(lines)
+
     def get_cwd(self) -> str:
-        # Expose current working directory from runner to callers (e.g., GUI)
         return self.runner.get_cwd()
